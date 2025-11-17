@@ -1,39 +1,25 @@
+# admin_dashboard.py
 """
-admin_dashboard.py
-Provides a decorated admin dashboard function for the Multi-Disease Prediction app.
-
-Usage (in your main app.py):
-
-from admin_dashboard import show_admin_dashboard
-
-# inside the admin page branch:
-show_admin_dashboard(st.session_state.user, _users, MODELS)
-
-Place an optional banner image at: assets/admin_banner.jpg (or png). If the file exists it will be shown.
+Admin dashboard without matplotlib dependency.
+Usage:
+    from admin_dashboard import show_admin_dashboard
+    show_admin_dashboard(current_user, users, models)
 """
 
 import streamlit as st
 import io
 import json
-import matplotlib.pyplot as plt
 from datetime import datetime
 
-
 def show_admin_dashboard(current_user, users, models):
-    """Render a separated, decorated admin dashboard.
-
-    Args:
-        current_user (str): username of the logged-in user (should be 'admin').
-        users (dict): full users data structure (from your app's users.json load)
-        models (dict): discovered models mapping (key -> {"model": ..., "filename": ...})
-    """
-    # Security check (call-site should already protect but double-check)
+    """Render a decorated admin dashboard without matplotlib."""
+    # Security check
     if not current_user or current_user.lower() != 'admin':
         st.error("Admin dashboard: access denied. Only the admin user may view this page.")
         return
 
-    # Page header with optional image
-    banner_path = 'assets/admin_banner.jpg'  # create an assets/ folder and add an image if you want
+    # Header + optional image
+    banner_path = 'assets/admin_banner.jpg'
     cols = st.columns([3, 1])
     with cols[0]:
         st.markdown("<h1 style='color:#ffffff; margin-bottom:2px;'>Admin Dashboard</h1>", unsafe_allow_html=True)
@@ -42,7 +28,6 @@ def show_admin_dashboard(current_user, users, models):
         try:
             st.image(banner_path, width=140)
         except Exception:
-            # image optional — ignore failure
             st.write("")
 
     st.markdown("---")
@@ -65,15 +50,18 @@ def show_admin_dashboard(current_user, users, models):
 
     st.markdown("### Predictions by model")
     if counts:
-        fig, ax = plt.subplots(figsize=(8, max(2, len(counts)*0.6)))
-        labels = list(counts.keys())
-        vals = [counts[k] for k in labels]
-        ax.barh(range(len(labels)), vals, color='#ff6b6b')
-        ax.set_yticks(range(len(labels)))
-        ax.set_yticklabels(labels)
-        ax.invert_yaxis()
-        ax.set_xlabel('Count')
-        st.pyplot(fig)
+        # Use Streamlit's native chart or a simple table
+        model_names = list(counts.keys())
+        model_values = [counts[k] for k in model_names]
+        rows = [{"model": m, "count": counts[m]} for m in model_names]
+        st.table(rows)
+        try:
+            import pandas as pd
+            df = pd.DataFrame({"model": model_names, "count": model_values}).set_index("model")
+            st.bar_chart(df)
+        except Exception:
+            for m, v in counts.items():
+                st.write(f"- {m}: {v}")
     else:
         st.info('No prediction records yet.')
 
@@ -93,7 +81,6 @@ def show_admin_dashboard(current_user, users, models):
                 for rec in history[:20]:
                     st.write(f"- {rec.get('timestamp')} — {rec.get('model')} — {rec.get('result')} (conf: {rec.get('confidence')})")
                 if st.button(f"Export full history for {uname}", key=f"export_{uname}"):
-                    # create CSV-like bytes
                     buf = io.StringIO()
                     buf.write('id,timestamp,model,result,confidence,inputs\n')
                     for rec in history:
@@ -104,18 +91,16 @@ def show_admin_dashboard(current_user, users, models):
 
     st.markdown("---")
 
-    # Admin actions: export all users, clear demo data (with confirmation)
+    # Admin actions
     st.markdown("### Admin actions")
     if st.button('Export all users (JSON)'):
         st.download_button('Download users.json', data=json.dumps(users, indent=2), file_name='users_export.json', mime='application/json')
 
     if st.button('Clear all demo prediction history (keep users)'):
-        # destructive: remove history arrays for all users
         for k in users:
             users[k]['history'] = []
         st.success('All histories cleared in memory; remember to save if you want this persisted.')
 
     st.markdown("---")
-    st.markdown("<div style='color:#999;'>Dashboard generated on {}.</div>".format(datetime.now().isoformat()), unsafe_allow_html=True)
-
+    st.markdown(f"<div style='color:#999;'>Dashboard generated on {datetime.now().isoformat()}.</div>", unsafe_allow_html=True)
     return
