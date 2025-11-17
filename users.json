@@ -1,0 +1,27 @@
+{
+  "admin": {
+    "password_hash": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+    "name": "Administrator",
+    "email": "admin@example.com"
+  },
+  "vivek": {
+    "password_hash": "a7b241faf0819f71b6bab7584202b7b70042db10ce709208da29aa202fc3e058",
+    "name": "Vivek Kumar",
+    "email": "vivek@example.com"
+  },
+  "vk": {
+    "password_hash": "a3da73976501812cd7b821a20bfb09af0a6a891e419cdfb761fb19a92c914242",
+    "name": "vk",
+    "email": ""
+  },
+  "ram": {
+    "password_hash": "a631f4488a457da27b4a64dc8f2d85085b50ff568be99125cf6f8f45c759878e",
+    "name": "",
+    "email": ""
+  },
+  "sun": {
+    "password_hash": "27756f050e14a1cb1c1ee867f0eace9ea4d9fcb81b8bee089469f1ebd5fd7b17",
+    "name": "sun",
+    "email": ""
+  }
+}
