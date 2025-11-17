@@ -2,7 +2,27 @@
   "admin": {
     "password_hash": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
     "name": "Administrator",
-    "email": "admin@example.com"
+    "email": "admin@example.com",
+    "history": [
+      {
+        "id": "0cf65d9c-d2a4-4e44-985d-8db37f684613",
+        "model": "diabetes_model.pkl",
+        "model_key": "diabetes_model",
+        "inputs": {
+          "Pregnancies": 1.0,
+          "Glucose": 120.0,
+          "BloodPressure": 70.0,
+          "SkinThickness": 20.0,
+          "Insulin": 80.0,
+          "BMI": 28.5,
+          "DPF": 0.5,
+          "Age": 45.0
+        },
+        "result": "The person has diabetes",
+        "confidence": 1.0,
+        "timestamp": "2025-11-17T21:44:50.096788"
+      }
+    ]
   },
   "vivek": {
     "password_hash": "a7b241faf0819f71b6bab7584202b7b70042db10ce709208da29aa202fc3e058",
@@ -12,7 +32,27 @@
   "vk": {
     "password_hash": "a3da73976501812cd7b821a20bfb09af0a6a891e419cdfb761fb19a92c914242",
     "name": "vk",
-    "email": ""
+    "email": "",
+    "history": [
+      {
+        "id": "3bb2be36-3902-4de0-bdd1-9c4468664229",
+        "model": "diabetes_model.pkl",
+        "model_key": "diabetes_model",
+        "inputs": {
+          "Pregnancies": 4.0,
+          "Glucose": 120.0,
+          "BloodPressure": 70.0,
+          "SkinThickness": 20.0,
+          "Insulin": 80.0,
+          "BMI": 28.5,
+          "DPF": 0.5,
+          "Age": 45.0
+        },
+        "result": "The person has diabetes",
+        "confidence": 1.0,
+        "timestamp": "2025-11-17T20:55:28.420571"
+      }
+    ]
   },
   "ram": {
     "password_hash": "a631f4488a457da27b4a64dc8f2d85085b50ff568be99125cf6f8f45c759878e",
