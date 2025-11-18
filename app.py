@@ -1794,6 +1794,791 @@
 
 
 
+# import streamlit as st
+# import pickle
+# import os
+# import json
+# import hashlib
+# import numpy as np
+# import streamlit.components.v1 as components
+# from streamlit_option_menu import option_menu
+# from datetime import datetime
+# import uuid
+# import io
+
+# # Try reportlab for PDF generation (optional). If not available, fallback to TXT.
+# try:
+#     from reportlab.lib.pagesizes import letter
+#     from reportlab.pdfgen import canvas
+#     REPORTLAB_AVAILABLE = True
+# except Exception:
+#     REPORTLAB_AVAILABLE = False
+
+# # Import admin dashboard function (separate file)
+# from admin_dashboard import show_admin_dashboard
+
+# st.set_page_config(page_title="Multi-Disease Prediction", layout="wide", page_icon="👨‍⚕️", initial_sidebar_state="expanded")
+
+# working_dir = os.path.dirname(os.path.abspath(__file__))
+# MODELS_DIR = os.path.join(working_dir, "notebook")
+# USER_DB_FILE = os.path.join(working_dir, "users.json")
+
+# # ---------------------- Translations (multi-language) ----------------------
+# TRANSLATIONS = {
+#     "en": {
+#         "app_title": "Multi-Disease Prediction",
+#         "app_sub": "Predict Diabetes, Heart Disease, and Parkinson's — with voice feedback & improved UI",
+#         "login": "Login",
+#         "register": "Register",
+#         "username": "Username",
+#         "password": "Password",
+#         "sign_in": "Sign in",
+#         "create_account": "Create account",
+#         "logout": "Logout",
+#         "profile": "Profile",
+#         "about": "About",
+#         "home": "Home",
+#         "diabetes": "Diabetes Prediction",
+#         "heart": "Heart Disease Prediction",
+#         "parkinsons": "Parkinsons Disease Prediction",
+#         "admin_dashboard": "Admin Dashboard",
+#         "enable_tts": "Enable sound / voice feedback",
+#         "download_report": "Download Report (PDF/TXT)",
+#         "generate_report": "Generate Report",
+#         "prediction_history": "Prediction History",
+#         "confidence": "Confidence",
+#         "no_model_proba": "N/A",
+#         "report_title": "Prediction Report",
+#         "timestamp": "Timestamp",
+#         "inputs": "Inputs",
+#         "result": "Result",
+#         "model": "Model",
+#         "ok": "OK",
+#         "error_fill": "Please fill fields with valid numeric values. Error: ",
+#         "select_model": "Select disease / model",
+#         "admin_note": "Admin (view user stats & history)"
+#     },
+#     "hi": {
+#         "app_title": "मल्टी-डिजीज़ प्रेडिक्शन",
+#         "app_sub": "हृदय रोग, डायबिटीज़ और पार्किंसन का अनुमान — वॉइस फीडबैक व बेहतर UI के साथ",
+#         "login": "लॉगिन",
+#         "register": "रजिस्टर",
+#         "username": "यूज़रनेम",
+#         "password": "पासवर्ड",
+#         "sign_in": "साइन इन",
+#         "create_account": "खाता बनाएँ",
+#         "logout": "लॉग आउट",
+#         "profile": "प्रोफ़ाइल",
+#         "about": "बारे में",
+#         "home": "होम",
+#         "diabetes": "डायबिटीज़ प्रेडिक्शन",
+#         "heart": "हृदय रोग प्रेडिक्शन",
+#         "parkinsons": "पार्किंसन प्रेडिक्शन",
+#         "admin_dashboard": "एडमिन डैशबोर्ड",
+#         "enable_tts": "साउंड / वॉइस फीडबैक सक्षम करें",
+#         "download_report": "रिपोर्ट डाउनलोड करें (PDF/TXT)",
+#         "generate_report": "रिपोर्ट बनाएं",
+#         "prediction_history": "पूर्वानुमान इतिहास",
+#         "confidence": "विश्वास (Confidence)",
+#         "no_model_proba": "एन/ए",
+#         "report_title": "प्रेडिक्शन रिपोर्ट",
+#         "timestamp": "समय",
+#         "inputs": "इनपुट्स",
+#         "result": "परिणाम",
+#         "model": "मॉडल",
+#         "ok": "ठीक है",
+#         "error_fill": "कृपया मान्य संख्यात्मक मान भरें। त्रुटि: ",
+#         "select_model": "रोग/मॉडल चुनें",
+#         "admin_note": "एडमिन (यूज़र आँकड़े देखें)"
+#     }
+# }
+
+# # language helper
+# if "lang" not in st.session_state:
+#     st.session_state.lang = "en"
+# def tr(key):
+#     return TRANSLATIONS.get(st.session_state.get("lang","en"), TRANSLATIONS["en"]).get(key, key)
+
+# # ---------------------- small UI helpers (TTS + banners) ----------------------
+# def speak(text):
+#     safe_text = str(text).replace("'", "\\'").replace("\n", " ")
+#     js = f"""
+#     <script>
+#     const synth = window.speechSynthesis;
+#     if (synth) {{
+#         const utter = new SpeechSynthesisUtterance('{safe_text}');
+#         utter.lang = 'en-US';
+#         utter.rate = 1;
+#         utter.pitch = 1;
+#         synth.cancel();
+#         synth.speak(utter);
+#     }}
+#     </script>
+#     """
+#     components.html(js, height=0)
+
+# def show_home_hero_and_scroll():
+#     hero_id = "home_hero_" + str(uuid.uuid4()).replace("-", "_")
+#     html = f"""
+#     <div id="{hero_id}" style="
+#         width:100%;
+#         border-radius:12px;
+#         padding:24px;
+#         margin-bottom:18px;
+#         background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+#         box-shadow: 0 12px 36px rgba(0,0,0,0.12);
+#       ">
+#       <div style="font-size:34px; font-weight:800; color:#fff; margin-bottom:6px;">
+#         {tr('app_title')}
+#       </div>
+#       <div style="font-size:15px; color:#cfcfcf;">
+#         {tr('app_sub')}
+#       </div>
+#     </div>
+#     <script>
+#       (function(){{
+#         const el = document.getElementById("{hero_id}");
+#         if (el){{
+#           el.scrollIntoView({{behavior: "smooth", block: "start"}});
+#           const orig = el.style.boxShadow;
+#           let i = 0;
+#           const t = setInterval(() => {{
+#             el.style.boxShadow = (i % 2 === 0) ? "0 0 0 10px rgba(0,150,136,0.08)" : orig;
+#             i++;
+#             if (i > 6) {{
+#               clearInterval(t); el.style.boxShadow = orig;
+#             }}
+#           }}, 220);
+#         }}
+#       }})();
+#     </script>
+#     """
+#     components.html(html, height=130)
+
+# def show_highlighted_result_and_scroll(text, positive=True):
+#     color = "#1b6b3a" if positive else "#a00000"
+#     banner_id = "pred_banner_" + str(uuid.uuid4()).replace("-", "_")
+#     html = f"""
+#     <div id="{banner_id}" style="
+#       border-radius:10px;
+#       padding:14px;
+#       margin:10px 0 20px 0;
+#       display:flex;
+#       align-items:center;
+#       gap:18px;
+#       background: rgba(255,255,255,0.01);
+#     ">
+#       <div style="flex:1">
+#         <div style="font-size:18px; font-weight:700; color:{color}; margin-bottom:6px;">{tr('result')}</div>
+#         <div style="font-size:15px; color:#e9ecef;">{text}</div>
+#       </div>
+#       <div style="background:{color}; color:white; padding:10px 14px; border-radius:8px; font-weight:700;">
+#         {text}
+#       </div>
+#     </div>
+#     <script>
+#       (function(){{
+#         const el = document.getElementById("{banner_id}");
+#         if (el){{
+#           el.scrollIntoView({{behavior: "smooth", block: "center"}});
+#           const orig = el.style.boxShadow;
+#           let i = 0;
+#           const t = setInterval(() => {{
+#             el.style.boxShadow = (i % 2 === 0) ? "0 0 0 8px rgba(255,255,0,0.08)" : orig;
+#             i++;
+#             if (i > 6) {{ clearInterval(t); el.style.boxShadow = orig; }}
+#           }}, 180);
+#         }}
+#       }})();
+#     </script>
+#     """
+#     components.html(html, height=120)
+
+# # ---------------------- user store + history ----------------------
+# _default_demo_users = {
+#     "admin": {
+#         "password_hash": hashlib.sha256("admin123".encode()).hexdigest(),
+#         "name": "Administrator",
+#         "email": "admin@example.com",
+#     },
+#     "vivek": {
+#         "password_hash": hashlib.sha256("vivek123".encode()).hexdigest(),
+#         "name": "Vivek Kumar",
+#         "email": "vivek@example.com",
+#     }
+# }
+
+# def load_users():
+#     if os.path.exists(USER_DB_FILE):
+#         try:
+#             with open(USER_DB_FILE, "r") as f:
+#                 return json.load(f)
+#         except Exception:
+#             return dict(_default_demo_users)
+#     else:
+#         d = dict(_default_demo_users)
+#         for k in d:
+#             d[k].setdefault("history", [])
+#         return d
+
+# def save_users(users):
+#     try:
+#         with open(USER_DB_FILE, "w") as f:
+#             json.dump(users, f, indent=2, default=str)
+#     except Exception as e:
+#         st.warning("Could not save users to disk: " + str(e))
+
+# _users = load_users()
+
+# def canonical_username(u):
+#     return u.strip().lower() if isinstance(u, str) else u
+
+# def verify_user(username, password):
+#     key = canonical_username(username)
+#     user = _users.get(key)
+#     if not user:
+#         return False
+#     return user["password_hash"] == hashlib.sha256(password.encode()).hexdigest()
+
+# def create_user(username, password, name="", email=""):
+#     key = canonical_username(username)
+#     if not username or not password:
+#         return False, "Username and password are required"
+#     if key in _users:
+#         return False, "Username already exists"
+#     _users[key] = {
+#         "password_hash": hashlib.sha256(password.encode()).hexdigest(),
+#         "name": name,
+#         "email": email,
+#         "history": []
+#     }
+#     save_users(_users)
+#     return True, "User created"
+
+# def get_user_profile(username):
+#     key = canonical_username(username)
+#     return _users.get(key, {})
+
+# def update_user_profile(username, name="", email=""):
+#     key = canonical_username(username)
+#     if key in _users:
+#         _users[key]["name"] = name
+#         _users[key]["email"] = email
+#         save_users(_users)
+#         return True
+#     return False
+
+# def add_history_record(username, record):
+#     key = canonical_username(username)
+#     if key not in _users:
+#         return False
+#     _users[key].setdefault("history", [])
+#     _users[key]["history"].insert(0, record)
+#     _users[key]["history"] = _users[key]["history"][:500]
+#     save_users(_users)
+#     return True
+
+# # ---------------------- auto-detect models in notebook/ ----------------------
+# def discover_models():
+#     models = {}
+#     if not os.path.isdir(MODELS_DIR):
+#         return models
+#     for fname in os.listdir(MODELS_DIR):
+#         if fname.lower().endswith(".pkl") or fname.lower().endswith(".joblib"):
+#             key = os.path.splitext(fname)[0]
+#             try:
+#                 model_obj = pickle.load(open(os.path.join(MODELS_DIR, fname), "rb"))
+#                 models[key] = {"model": model_obj, "filename": fname}
+#             except Exception as e:
+#                 st.warning(f"Could not load model {fname}: {e}")
+#     return models
+
+# MODELS = discover_models()
+# MODEL_LABELS = {
+#     "diabetes_model": tr("diabetes"),
+#     "heart_model": tr("heart"),
+#     "parkinsons_model": tr("parkinsons")
+# }
+# AVAILABLE_MODELS = []
+# for key in MODELS:
+#     label = MODEL_LABELS.get(key, key.replace("_", " ").title())
+#     AVAILABLE_MODELS.append((key, label))
+
+# # ---------------------- session defaults ----------------------
+# if "logged_in" not in st.session_state:
+#     st.session_state.logged_in = False
+# if "user" not in st.session_state:
+#     st.session_state.user = None
+# if "profile" not in st.session_state:
+#     st.session_state.profile = {"name": "", "email": ""}
+# if "enable_tts" not in st.session_state:
+#     st.session_state.enable_tts = True
+# if "lang" not in st.session_state:
+#     st.session_state.lang = "en"
+
+# # ---------------------- Sidebar + styling ----------------------
+# st.markdown(
+#     """
+#     <style>
+#     section[data-testid="stSidebar"] > div:first-child {
+#       padding: 18px;
+#       border-top-right-radius: 14px;
+#       border-bottom-right-radius: 14px;
+#       background: linear-gradient(180deg,#1f1f23,#19191c);
+#     }
+#     .stApp > main { padding-top: 8px; }
+#     .block-container .stTextInput input, .block-container .stNumberInput input {
+#       background: #0f1113;
+#     }
+#     </style>
+#     """,
+#     unsafe_allow_html=True
+# )
+
+# with st.sidebar:
+#     # language selector: English / Hindi (maps to 'en' / 'hi')
+#     lang_choice = st.selectbox("Language / भाषा", options=["English", "Hindi"], index=0 if st.session_state.lang=="en" else 1)
+#     st.session_state.lang = "en" if lang_choice == "English" else "hi"
+
+#     # menu (use translated labels)
+#     menu_items = [
+#         tr("home"), tr("diabetes"), tr("heart"), tr("parkinsons"),
+#         tr("prediction_history"), tr("admin_dashboard"), tr("profile"), tr("about")
+#     ]
+#     selected = option_menu(
+#         menu_title=None,
+#         options=menu_items,
+#         icons=["house", "activity", "heart", "person", "clock-history", "speedometer", "person-circle", "info-circle"],
+#         menu_icon="cast",
+#         default_index=1,
+#         orientation="vertical"
+#     )
+
+#     st.markdown("---")
+#     # Account area
+#     if st.session_state.logged_in:
+#         st.markdown(f"**{tr('username')}:** {st.session_state.user}")
+#         if st.button(tr("logout")):
+#             st.session_state.logged_in = False
+#             st.session_state.user = None
+#             st.session_state.profile = {"name": "", "email": ""}
+#             st.success(tr("logout"))
+#     else:
+#         st.markdown("**Account**")
+#         acc_choice = st.radio("", (tr("login"), tr("register")))
+#         if acc_choice == tr("login"):
+#             user_in = st.text_input(tr("username"), key="login_username")
+#             pw_in = st.text_input(tr("password"), type="password", key="login_password")
+#             if st.button(tr("sign_in")):
+#                 if verify_user(user_in, pw_in):
+#                     st.session_state.logged_in = True
+#                     st.session_state.user = canonical_username(user_in)
+#                     profile_data = get_user_profile(user_in)
+#                     st.session_state.profile = {"name": profile_data.get("name", ""), "email": profile_data.get("email", "")}
+#                     st.success(f"Welcome, {st.session_state.profile.get('name') or st.session_state.user}!")
+#                 else:
+#                     st.error("Invalid username or password")
+#         else:
+#             new_user = st.text_input(tr("username"), key="reg_user")
+#             new_pw = st.text_input(tr("password"), type="password", key="reg_pw")
+#             new_name = st.text_input(tr("profile"), placeholder="Full name (optional)", key="reg_name")
+#             new_email = st.text_input("Email (optional)", key="reg_email")
+#             if st.button(tr("create_account")):
+#                 ok, msg = create_user(new_user, new_pw, new_name, new_email)
+#                 if ok:
+#                     st.success("Account created. Please log in.")
+#                 else:
+#                     st.error(msg)
+
+#     st.markdown("---")
+#     st.checkbox(tr("enable_tts"), key="enable_tts", value=st.session_state.get("enable_tts", True))
+#     st.markdown("---")
+#     st.write("Available models:")
+#     for key, label in AVAILABLE_MODELS:
+#         st.write(f"- **{label}**  (_{MODELS[key]['filename']}_)")
+#     st.write("Tip: drop more `.pkl` files into the `notebook/` folder and restart the app.")
+
+# # ---------------------- helper functions ----------------------
+# def ensure_logged_in():
+#     if not st.session_state.logged_in:
+#         st.warning("Please log in to use prediction features. Use the sidebar Account -> Login.")
+#         st.stop()
+
+# def model_predict_and_confidence(model_obj, X):
+#     pred = model_obj.predict(X)
+#     conf = None
+#     try:
+#         if hasattr(model_obj, "predict_proba"):
+#             probs = model_obj.predict_proba(X)
+#             conf = float(np.max(probs, axis=1)[0])
+#         elif hasattr(model_obj, "decision_function"):
+#             df = model_obj.decision_function(X)
+#             conf = float(1 / (1 + np.exp(-float(df[0]))))
+#         else:
+#             conf = None
+#     except Exception:
+#         conf = None
+#     return int(pred[0]), conf
+
+# def generate_pdf_bytes(user, record):
+#     if REPORTLAB_AVAILABLE:
+#         buffer = io.BytesIO()
+#         c = canvas.Canvas(buffer, pagesize=letter)
+#         width, height = letter
+#         margin = 40
+#         y = height - margin
+#         c.setFont("Helvetica-Bold", 18)
+#         c.drawString(margin, y, tr("report_title"))
+#         y -= 30
+#         c.setFont("Helvetica", 11)
+#         c.drawString(margin, y, f"{tr('timestamp')}: {record.get('timestamp')}")
+#         y -= 20
+#         c.drawString(margin, y, f"{tr('model')}: {record.get('model')}")
+#         y -= 20
+#         c.drawString(margin, y, f"{tr('result')}: {record.get('result')}")
+#         y -= 20
+#         conf_text = f"{tr('confidence')}: {record.get('confidence'):.3f}" if record.get("confidence") is not None else f"{tr('confidence')}: {tr('no_model_proba')}"
+#         c.drawString(margin, y, conf_text)
+#         y -= 26
+#         c.drawString(margin, y, f"{tr('inputs')}:")
+#         y -= 16
+#         inputs = record.get("inputs", {})
+#         for k, v in inputs.items():
+#             s = f" - {k}: {v}"
+#             if y < 80:
+#                 c.showPage()
+#                 y = height - margin
+#             c.drawString(margin + 6, y, s)
+#             y -= 14
+#         c.showPage()
+#         c.save()
+#         buffer.seek(0)
+#         return buffer
+#     else:
+#         buffer = io.BytesIO()
+#         txt_lines = []
+#         txt_lines.append(tr("report_title"))
+#         txt_lines.append("="*len(tr("report_title")))
+#         txt_lines.append(f"{tr('timestamp')}: {record.get('timestamp')}")
+#         txt_lines.append(f"{tr('model')}: {record.get('model')}")
+#         txt_lines.append(f"{tr('result')}: {record.get('result')}")
+#         if record.get("confidence") is not None:
+#             txt_lines.append(f"{tr('confidence')}: {record.get('confidence'):.3f}")
+#         else:
+#             txt_lines.append(f"{tr('confidence')}: {tr('no_model_proba')}")
+#         txt_lines.append("")
+#         txt_lines.append(f"{tr('inputs')}:")
+#         for k, v in record.get("inputs", {}).items():
+#             txt_lines.append(f" - {k}: {v}")
+#         s = "\n".join(txt_lines)
+#         buffer.write(s.encode("utf-8"))
+#         buffer.seek(0)
+#         return buffer
+
+# # ---------------------- Pages ----------------------
+# if selected == tr("home"):
+#     show_home_hero_and_scroll()
+#     st.write("## " + tr("home"))
+#     st.write(tr("app_sub"))
+#     st.write("---")
+#     st.write("Demo accounts: `admin` / `admin123`, `vivek` / `vivek123`")
+#     st.write("To add more disease models, put their `.pkl` files into `notebook/` and restart the app.")
+
+# # Prediction pages (unified)
+# if selected in [tr("diabetes"), tr("heart"), tr("parkinsons")]:
+#     ensure_logged_in()
+#     show_home_hero_and_scroll()
+#     st.markdown(f"<h1 style='color:white'>{selected}</h1>", unsafe_allow_html=True)
+#     st.write("Fill features below. Numeric placeholders example values are shown.")
+
+#     # Determine model key
+#     desired_label = selected
+#     model_key = None
+#     for k, label in AVAILABLE_MODELS:
+#         if label.lower() == desired_label.lower() or k.lower().find(desired_label.split()[0].lower()) != -1:
+#             model_key = k
+#             break
+#     if model_key is None and AVAILABLE_MODELS:
+#         model_key = AVAILABLE_MODELS[0][0]
+
+#     # DIABETES
+#     if "diabetes" in model_key:
+#         col1, col2, col3 = st.columns(3)
+#         with col1:
+#             Pregnancies = st.number_input("Number of Pregnancies", min_value=0.0, max_value=50.0, value=0.0, step=1.0)
+#         with col2:
+#             Glucose = st.number_input("Glucose Level (mg/dl)", min_value=0.0, value=120.0)
+#         with col3:
+#             BloodPressure = st.number_input("BloodPressure (mm Hg)", min_value=0.0, value=70.0)
+#         with col1:
+#             SkinThickness = st.number_input("SkinThickness (mm)", min_value=0.0, value=20.0)
+#         with col2:
+#             Insulin = st.number_input("Insulin (IU)", min_value=0.0, value=80.0)
+#         with col3:
+#             BMI = st.number_input("BMI (kg/m2)", min_value=0.0, value=28.5)
+#         with col1:
+#             DiabetesPedigreeFunction = st.number_input("DiabetesPedigreeFunction", min_value=0.0, value=0.5)
+#         with col2:
+#             Age = st.number_input("Age (years)", min_value=0.0, value=45.0)
+
+#         if st.button("Diabetes Test Result"):
+#             try:
+#                 raw_features = [Pregnancies, Glucose, BloodPressure, SkinThickness, Insulin, BMI, DiabetesPedigreeFunction, Age]
+#                 NewBMI_Overweight = NewBMI_Underweight = NewBMI_Obesity_1 = NewBMI_Obesity_2 = NewBMI_Obesity_3 = 0
+#                 NewInsulinScore_Normal = NewGlucose_Low = NewGlucose_Normal = NewGlucose_Overweight = NewGlucose_Secret = 0
+#                 b = BMI
+#                 if b <= 18.5:
+#                     NewBMI_Underweight = 1
+#                 elif 18.5 < b <= 24.9:
+#                     pass
+#                 elif 24.9 < b <= 29.9:
+#                     NewBMI_Overweight = 1
+#                 elif 29.9 < b <= 34.9:
+#                     NewBMI_Obesity_1 = 1
+#                 elif 34.9 < b <= 39.9:
+#                     NewBMI_Obesity_2 = 1
+#                 else:
+#                     NewBMI_Obesity_3 = 1
+#                 if 16 <= Insulin <= 166:
+#                     NewInsulinScore_Normal = 1
+#                 g = Glucose
+#                 if g <= 70:
+#                     NewGlucose_Low = 1
+#                 elif 70 < g <= 99:
+#                     NewGlucose_Normal = 1
+#                 elif 99 < g <= 126:
+#                     NewGlucose_Overweight = 1
+#                 else:
+#                     NewGlucose_Secret = 1
+
+#                 engineered_flags = [NewBMI_Underweight, NewBMI_Overweight, NewBMI_Obesity_1,
+#                                     NewBMI_Obesity_2, NewBMI_Obesity_3, NewInsulinScore_Normal,
+#                                     NewGlucose_Low, NewGlucose_Normal, NewGlucose_Overweight, NewGlucose_Secret]
+#                 full_input = raw_features + engineered_flags
+
+#                 model_obj = MODELS[model_key]["model"]
+#                 expected = getattr(model_obj, "n_features_in__", None)
+#                 if expected is None:
+#                     try:
+#                         X = np.array(raw_features, dtype=float).reshape(1, -1)
+#                         pred, conf = model_predict_and_confidence(model_obj, X)
+#                     except Exception:
+#                         X = np.array(full_input, dtype=float).reshape(1, -1)
+#                         pred, conf = model_predict_and_confidence(model_obj, X)
+#                 else:
+#                     if expected == len(raw_features):
+#                         X = np.array(raw_features, dtype=float).reshape(1, -1)
+#                         pred, conf = model_predict_and_confidence(model_obj, X)
+#                     elif expected == len(full_input):
+#                         X = np.array(full_input, dtype=float).reshape(1, -1)
+#                         pred, conf = model_predict_and_confidence(model_obj, X)
+#                     else:
+#                         st.error(f"Model expects {expected} features. Raw={len(raw_features)}, Full={len(full_input)}.")
+#                         st.stop()
+
+#                 if pred == 1:
+#                     res = "The person has diabetes"
+#                     positive = True
+#                 else:
+#                     res = "The person does not have diabetes"
+#                     positive = False
+
+#                 show_highlighted_result_and_scroll(res, positive=positive)
+#                 if st.session_state.get("enable_tts", True):
+#                     speak(res)
+
+#                 record = {
+#                     "id": str(uuid.uuid4()),
+#                     "model": MODELS[model_key]["filename"],
+#                     "model_key": model_key,
+#                     "inputs": dict(zip(["Pregnancies","Glucose","BloodPressure","SkinThickness","Insulin","BMI","DPF","Age"], raw_features)),
+#                     "result": res,
+#                     "confidence": conf,
+#                     "timestamp": datetime.now().isoformat()
+#                 }
+#                 add_history_record(st.session_state.user, record)
+#                 buf = generate_pdf_bytes(st.session_state.user, record)
+#                 bname = f"report_{record['id']}.pdf" if REPORTLAB_AVAILABLE else f"report_{record['id']}.txt"
+#                 st.download_button(tr("download_report"), data=buf, file_name=bname, mime="application/octet-stream")
+#             except Exception as e:
+#                 st.error(tr("error_fill") + str(e))
+
+#     # HEART
+#     elif "heart" in model_key:
+#         col1, col2, col3 = st.columns(3)
+#         with col1:
+#             age = st.number_input("Age", min_value=0.0, value=54.0)
+#         with col2:
+#             sex = st.selectbox("Sex (1=male,0=female)", options=[1,0], index=0)
+#         with col3:
+#             cp = st.number_input("Chest Pain Types (0-3)", min_value=0.0, max_value=3.0, value=1.0)
+#         with col1:
+#             trtbps = st.number_input("Resting Blood Pressure (mm Hg)", min_value=0.0, value=130.0)
+#         with col2:
+#             chol = st.number_input("Cholesterol (mg/dl)", min_value=0.0, value=233.0)
+#         with col3:
+#             fbs = st.selectbox("Fasting blood sugar > 120 mg/dl (1=true,0=false)", options=[0,1], index=0)
+#         with col1:
+#             restecg = st.number_input("Resting ECG (0/1/2)", min_value=0.0, max_value=2.0, value=0.0)
+#         with col2:
+#             thalachh = st.number_input("Max Heart Rate (thalach)", min_value=0.0, value=150.0)
+#         with col3:
+#             exng = st.selectbox("Exercise Induced Angina (1=yes,0=no)", options=[0,1], index=0)
+#         with col1:
+#             oldpeak = st.number_input("ST depression (oldpeak)", value=1.2)
+#         with col2:
+#             slp = st.number_input("Slope (0/1/2)", min_value=0.0, max_value=2.0, value=1.0)
+#         with col3:
+#             caa = st.number_input("Major vessels colored by flourosopy (0-3)", min_value=0.0, max_value=3.0, value=0.0)
+#         with col1:
+#             thall = st.number_input("thal (0 normal,1 fixed,2 reversible)", min_value=0.0, max_value=2.0, value=1.0)
+
+#         if st.button("Heart Disease Test Result"):
+#             try:
+#                 vals = [age, sex, cp, trtbps, chol, fbs, restecg, thalachh, exng, oldpeak, slp, caa, thall]
+#                 model_obj = MODELS[model_key]["model"]
+#                 Xh = np.array(vals, dtype=float).reshape(1, -1)
+#                 expected_h = getattr(model_obj, "n_features_in__", None)
+#                 if expected_h is not None and Xh.shape[1] != expected_h:
+#                     st.error(f"Model expects {expected_h} features but input has {Xh.shape[1]}.")
+#                     st.stop()
+#                 pred_h, conf = model_predict_and_confidence(model_obj, Xh)
+#                 if pred_h == 1:
+#                     res = "This person is having heart disease"
+#                     pos = True
+#                 else:
+#                     res = "This person does not have any heart disease"
+#                     pos = False
+#                 show_highlighted_result_and_scroll(res, positive=pos)
+#                 if st.session_state.get("enable_tts", True): speak(res)
+#                 record = {
+#                     "id": str(uuid.uuid4()), "model": MODELS[model_key]["filename"], "model_key": model_key,
+#                     "inputs": {"age": age, "sex": sex, "cp": cp, "trtbps": trtbps, "chol": chol, "fbs": fbs,
+#                                "restecg": restecg, "thalachh": thalachh, "exng": exng, "oldpeak": oldpeak,
+#                                "slp": slp, "caa": caa, "thall": thall},
+#                     "result": res, "confidence": conf, "timestamp": datetime.now().isoformat()
+#                 }
+#                 add_history_record(st.session_state.user, record)
+#                 buf = generate_pdf_bytes(st.session_state.user, record)
+#                 bname = f"report_{record['id']}.pdf" if REPORTLAB_AVAILABLE else f"report_{record['id']}.txt"
+#                 st.download_button(tr("download_report"), data=buf, file_name=bname, mime="application/octet-stream")
+#             except Exception as e:
+#                 st.error(tr("error_fill") + str(e))
+
+#     # PARKINSONS OR OTHER
+#     else:
+#         if "parkinsons" in model_key:
+#             st.write("Enter 22 voice-feature numeric fields (see model training spec).")
+#             cols = st.columns(4)
+#             labels = ["MDVP:Fo(Hz)","MDVP:Fhi(Hz)","MDVP:Flo(Hz)","MDVP:Jitter(%)","MDVP:Jitter(Abs)","MDVP:RAP","MDVP:PPQ","Jitter:DDP",
+#                       "MDVP:Shimmer","MDVP:Shimmer(dB)","Shimmer:APQ3","Shimmer:APQ5","MDVP:APQ","Shimmer:DDA","NHR","HNR","RPDE","DFA","spread1","spread2","D2","PPE"]
+#             inputs = []
+#             for i, label in enumerate(labels):
+#                 col = cols[i % 4]
+#                 inputs.append(col.number_input(label, value=0.0))
+#             if st.button("Parkinsons's Test Result"):
+#                 try:
+#                     numeric_vals = [float(x) for x in inputs]
+#                     Xp = np.array(numeric_vals).reshape(1, -1)
+#                     model_obj = MODELS[model_key]["model"]
+#                     expected_p = getattr(model_obj, "n_features_in__", None)
+#                     if expected_p is not None and Xp.shape[1] != expected_p:
+#                         st.error(f"Model expects {expected_p} features but input has {Xp.shape[1]}.")
+#                         st.stop()
+#                     pred_p, conf = model_predict_and_confidence(model_obj, Xp)
+#                     if pred_p == 1:
+#                         res = "This person has Parkinsons disease"
+#                         pos = True
+#                     else:
+#                         res = "This person does not have Parkinsons disease"
+#                         pos = False
+#                     show_highlighted_result_and_scroll(res, positive=pos)
+#                     if st.session_state.get("enable_tts", True): speak(res)
+#                     record = {"id": str(uuid.uuid4()), "model": MODELS[model_key]["filename"], "model_key": model_key,
+#                               "inputs": dict(zip(labels, numeric_vals)), "result": res, "confidence": conf, "timestamp": datetime.now().isoformat()}
+#                     add_history_record(st.session_state.user, record)
+#                     buf = generate_pdf_bytes(st.session_state.user, record)
+#                     bname = f"report_{record['id']}.pdf" if REPORTLAB_AVAILABLE else f"report_{record['id']}.txt"
+#                     st.download_button(tr("download_report"), data=buf, file_name=bname, mime="application/octet-stream")
+#                 except Exception as e:
+#                     st.error(tr("error_fill") + str(e))
+#         else:
+#             st.write("Custom model detected. Enter comma-separated numeric features matching the model training schema.")
+#             raw = st.text_area("Comma-separated numeric features (one sample)", placeholder="e.g. 5,124,70,... ")
+#             if st.button("Predict with custom model"):
+#                 try:
+#                     vals = [float(x.strip()) for x in raw.split(",") if x.strip() != ""]
+#                     if len(vals) == 0:
+#                         st.error("Please enter numeric CSV values.")
+#                         st.stop()
+#                     model_obj = MODELS[model_key]["model"]
+#                     X = np.array(vals, dtype=float).reshape(1, -1)
+#                     expected = getattr(model_obj, "n_features_in__", None)
+#                     if expected is not None and X.shape[1] != expected:
+#                         st.error(f"Model expects {expected} features but input has {X.shape[1]}.")
+#                         st.stop()
+#                     pred, conf = model_predict_and_confidence(model_obj, X)
+#                     res = f"Predicted label: {pred}"
+#                     show_highlighted_result_and_scroll(res, positive=True)
+#                     if st.session_state.get("enable_tts", True):
+#                         speak(res)
+#                     record = {"id": str(uuid.uuid4()), "model": MODELS[model_key]["filename"], "model_key": model_key,
+#                               "inputs": {"csv": vals}, "result": res, "confidence": conf, "timestamp": datetime.now().isoformat()}
+#                     add_history_record(st.session_state.user, record)
+#                     buf = generate_pdf_bytes(st.session_state.user, record)
+#                     bname = f"report_{record['id']}.pdf" if REPORTLAB_AVAILABLE else f"report_{record['id']}.txt"
+#                     st.download_button(tr("download_report"), data=buf, file_name=bname, mime="application/octet-stream")
+#                 except Exception as e:
+#                     st.error("Prediction failed: " + str(e))
+
+# # Prediction history page
+# if selected == tr("prediction_history"):
+#     ensure_logged_in()
+#     st.title(tr("prediction_history"))
+#     profile = get_user_profile(st.session_state.user)
+#     history = profile.get("history", [])
+#     if not history:
+#         st.info("No prediction history yet. Run a prediction to create records.")
+#     else:
+#         for rec in history:
+#             st.write(f"**{rec.get('timestamp')}**  —  {rec.get('model')}  —  {rec.get('result')}")
+#             st.write(f"Confidence: {rec.get('confidence') if rec.get('confidence') is not None else tr('no_model_proba')}")
+#             with st.expander("Inputs"):
+#                 st.json(rec.get("inputs", {}))
+#             buf = generate_pdf_bytes(st.session_state.user, rec)
+#             st.download_button("Download report", data=buf, file_name=f"report_{rec.get('id')}.pdf" if REPORTLAB_AVAILABLE else f"report_{rec.get('id')}.txt", mime="application/octet-stream")
+
+# # Admin dashboard: replaced inline page with separate file call
+# if selected == tr("admin_dashboard"):
+#     ensure_logged_in()
+#     # call the external admin_dashboard.show_admin_dashboard
+#     show_admin_dashboard(st.session_state.user, _users, MODELS)
+
+# # Profile & About
+# if selected == tr("profile"):
+#     ensure_logged_in()
+#     st.title(tr("profile"))
+#     name = st.text_input("Full name", value=st.session_state.profile.get("name",""), key="profile_name")
+#     email = st.text_input("Email", value=st.session_state.profile.get("email",""), key="profile_email")
+#     if st.button("Save profile"):
+#         st.session_state.profile["name"] = name
+#         st.session_state.profile["email"] = email
+#         update_user_profile(st.session_state.user, name=name, email=email)
+#         st.success("Profile updated")
+#     st.write("Current session user:", st.session_state.user)
+
+# if selected == tr("about"):
+#     st.title(tr("about"))
+#     st.write("This enhanced app includes: downloadable reports, prediction history, admin dashboard, confidence scores, UI improvements, multi-language support, and more.")
+#     st.write("To add new models: drop their `.pkl` files into the `notebook/` folder and restart the app.")
+
+
+# app.py
+# Multi-Disease Prediction - Single-file integrated app
+# Includes: auth, profile, navbar, pages (diabetes, heart, parkinsons),
+# admin dashboard, prediction history, pdf utils, TTS, translations.
+# Place pretrained model .pkl files in ./notebook/
+
 import streamlit as st
 import pickle
 import os
@@ -1814,20 +2599,27 @@ try:
 except Exception:
     REPORTLAB_AVAILABLE = False
 
-# Import admin dashboard function (separate file)
-from admin_dashboard import show_admin_dashboard
+# -------------------- Configuration --------------------
+st.set_page_config(page_title="Multi-Disease Prediction", layout="wide", page_icon="🩺", initial_sidebar_state="expanded")
+WORKING_DIR = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR = os.path.join(WORKING_DIR, "notebook")
+USERS_JSON = os.path.join(WORKING_DIR, "users.json")
+ASSETS_DIR = os.path.join(WORKING_DIR, "assets")  # optional assets like admin_banner.jpg
 
-st.set_page_config(page_title="Multi-Disease Prediction", layout="wide", page_icon="👨‍⚕️", initial_sidebar_state="expanded")
-
-working_dir = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.join(working_dir, "notebook")
-USER_DB_FILE = os.path.join(working_dir, "users.json")
-
-# ---------------------- Translations (multi-language) ----------------------
+# -------------------- Translations --------------------
 TRANSLATIONS = {
     "en": {
         "app_title": "Multi-Disease Prediction",
-        "app_sub": "Predict Diabetes, Heart Disease, and Parkinson's — with voice feedback & improved UI",
+        "app_sub": "Predict Diabetes, Heart Disease, and Parkinson's — voice feedback & polished UI",
+        "home": "Home",
+        "diabetes": "Diabetes Prediction",
+        "heart": "Heart Disease Prediction",
+        "parkinsons": "Parkinsons Disease Prediction",
+        "prediction_history": "Prediction History",
+        "admin_dashboard": "Admin Dashboard",
+        "profile": "Profile",
+        "about": "About",
+        "contact": "Contact",
         "login": "Login",
         "register": "Register",
         "username": "Username",
@@ -1835,17 +2627,8 @@ TRANSLATIONS = {
         "sign_in": "Sign in",
         "create_account": "Create account",
         "logout": "Logout",
-        "profile": "Profile",
-        "about": "About",
-        "home": "Home",
-        "diabetes": "Diabetes Prediction",
-        "heart": "Heart Disease Prediction",
-        "parkinsons": "Parkinsons Disease Prediction",
-        "admin_dashboard": "Admin Dashboard",
         "enable_tts": "Enable sound / voice feedback",
         "download_report": "Download Report (PDF/TXT)",
-        "generate_report": "Generate Report",
-        "prediction_history": "Prediction History",
         "confidence": "Confidence",
         "no_model_proba": "N/A",
         "report_title": "Prediction Report",
@@ -1853,14 +2636,20 @@ TRANSLATIONS = {
         "inputs": "Inputs",
         "result": "Result",
         "model": "Model",
-        "ok": "OK",
         "error_fill": "Please fill fields with valid numeric values. Error: ",
-        "select_model": "Select disease / model",
-        "admin_note": "Admin (view user stats & history)"
     },
     "hi": {
         "app_title": "मल्टी-डिजीज़ प्रेडिक्शन",
-        "app_sub": "हृदय रोग, डायबिटीज़ और पार्किंसन का अनुमान — वॉइस फीडबैक व बेहतर UI के साथ",
+        "app_sub": "डायबिटीज़, हृदय रोग और पार्किंसन का अनुमान — वॉइस फीडबैक और बेहतर UI",
+        "home": "होम",
+        "diabetes": "डायबिटीज़ प्रेडिक्शन",
+        "heart": "हृदय रोग प्रेडिक्शन",
+        "parkinsons": "पार्किंसन प्रेडिक्शन",
+        "prediction_history": "पूर्वानुमान इतिहास",
+        "admin_dashboard": "एडमिन डैशबोर्ड",
+        "profile": "प्रोफ़ाइल",
+        "about": "बारे में",
+        "contact": "संपर्क करें",
         "login": "लॉगिन",
         "register": "रजिस्टर",
         "username": "यूज़रनेम",
@@ -1868,199 +2657,190 @@ TRANSLATIONS = {
         "sign_in": "साइन इन",
         "create_account": "खाता बनाएँ",
         "logout": "लॉग आउट",
-        "profile": "प्रोफ़ाइल",
-        "about": "बारे में",
-        "home": "होम",
-        "diabetes": "डायबिटीज़ प्रेडिक्शन",
-        "heart": "हृदय रोग प्रेडिक्शन",
-        "parkinsons": "पार्किंसन प्रेडिक्शन",
-        "admin_dashboard": "एडमिन डैशबोर्ड",
         "enable_tts": "साउंड / वॉइस फीडबैक सक्षम करें",
         "download_report": "रिपोर्ट डाउनलोड करें (PDF/TXT)",
-        "generate_report": "रिपोर्ट बनाएं",
-        "prediction_history": "पूर्वानुमान इतिहास",
-        "confidence": "विश्वास (Confidence)",
+        "confidence": "विश्वास",
         "no_model_proba": "एन/ए",
         "report_title": "प्रेडिक्शन रिपोर्ट",
         "timestamp": "समय",
         "inputs": "इनपुट्स",
         "result": "परिणाम",
         "model": "मॉडल",
-        "ok": "ठीक है",
         "error_fill": "कृपया मान्य संख्यात्मक मान भरें। त्रुटि: ",
-        "select_model": "रोग/मॉडल चुनें",
-        "admin_note": "एडमिन (यूज़र आँकड़े देखें)"
     }
 }
+def tr(key):
+    lang = st.session_state.get("lang", "en")
+    return TRANSLATIONS.get(lang, TRANSLATIONS["en"]).get(key, key)
 
-# language helper
+# -------------------- Session defaults --------------------
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "user" not in st.session_state:
+    st.session_state.user = None
+if "profile" not in st.session_state:
+    st.session_state.profile = {"name":"","email":""}
+if "enable_tts" not in st.session_state:
+    st.session_state.enable_tts = True
 if "lang" not in st.session_state:
     st.session_state.lang = "en"
-def tr(key):
-    return TRANSLATIONS.get(st.session_state.get("lang","en"), TRANSLATIONS["en"]).get(key, key)
 
-# ---------------------- small UI helpers (TTS + banners) ----------------------
+# -------------------- Utils: TTS, banners --------------------
 def speak(text):
+    # Use browser speech synthesis via injected JS
     safe_text = str(text).replace("'", "\\'").replace("\n", " ")
     js = f"""
     <script>
     const synth = window.speechSynthesis;
     if (synth) {{
-        const utter = new SpeechSynthesisUtterance('{safe_text}');
-        utter.lang = 'en-US';
-        utter.rate = 1;
-        utter.pitch = 1;
-        synth.cancel();
-        synth.speak(utter);
+      const utter = new SpeechSynthesisUtterance('{safe_text}');
+      utter.lang = 'en-US';
+      utter.rate = 1;
+      utter.pitch = 1;
+      synth.cancel();
+      synth.speak(utter);
     }}
     </script>
     """
     components.html(js, height=0)
 
-def show_home_hero_and_scroll():
-    hero_id = "home_hero_" + str(uuid.uuid4()).replace("-", "_")
+def banner_hero():
+    hero_id = "hero_" + uuid.uuid4().hex[:8]
     html = f"""
-    <div id="{hero_id}" style="
-        width:100%;
-        border-radius:12px;
-        padding:24px;
-        margin-bottom:18px;
-        background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
-        box-shadow: 0 12px 36px rgba(0,0,0,0.12);
-      ">
-      <div style="font-size:34px; font-weight:800; color:#fff; margin-bottom:6px;">
-        {tr('app_title')}
-      </div>
-      <div style="font-size:15px; color:#cfcfcf;">
-        {tr('app_sub')}
-      </div>
+    <div id="{hero_id}" style="padding:20px;border-radius:12px;margin-bottom:12px;background:linear-gradient(90deg,#0f1724,#111827);">
+      <h1 style="color:white;margin:0;">{tr('app_title')}</h1>
+      <div style="color:#c7c7c7;margin-top:6px;">{tr('app_sub')}</div>
     </div>
-    <script>
-      (function(){{
-        const el = document.getElementById("{hero_id}");
-        if (el){{
-          el.scrollIntoView({{behavior: "smooth", block: "start"}});
-          const orig = el.style.boxShadow;
-          let i = 0;
-          const t = setInterval(() => {{
-            el.style.boxShadow = (i % 2 === 0) ? "0 0 0 10px rgba(0,150,136,0.08)" : orig;
-            i++;
-            if (i > 6) {{
-              clearInterval(t); el.style.boxShadow = orig;
-            }}
-          }}, 220);
-        }}
-      }})();
-    </script>
+    <script>document.getElementById('{hero_id}').scrollIntoView({{behavior:'smooth'}});</script>
     """
-    components.html(html, height=130)
+    components.html(html, height=110)
 
-def show_highlighted_result_and_scroll(text, positive=True):
-    color = "#1b6b3a" if positive else "#a00000"
-    banner_id = "pred_banner_" + str(uuid.uuid4()).replace("-", "_")
+def result_banner(text, positive=True):
+    color = "#1bbf7a" if positive else "#e05b5b"
+    bid = "res_" + uuid.uuid4().hex[:8]
     html = f"""
-    <div id="{banner_id}" style="
-      border-radius:10px;
-      padding:14px;
-      margin:10px 0 20px 0;
-      display:flex;
-      align-items:center;
-      gap:18px;
-      background: rgba(255,255,255,0.01);
-    ">
-      <div style="flex:1">
-        <div style="font-size:18px; font-weight:700; color:{color}; margin-bottom:6px;">{tr('result')}</div>
-        <div style="font-size:15px; color:#e9ecef;">{text}</div>
-      </div>
-      <div style="background:{color}; color:white; padding:10px 14px; border-radius:8px; font-weight:700;">
-        {text}
-      </div>
+    <div id="{bid}" style="border-radius:10px;padding:12px;margin:10px 0;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);">
+      <div style="font-weight:700;color:{color};font-size:16px">{text}</div>
+      <div style="background:{color};color:white;padding:8px 12px;border-radius:8px;font-weight:700;">{text}</div>
     </div>
-    <script>
-      (function(){{
-        const el = document.getElementById("{banner_id}");
-        if (el){{
-          el.scrollIntoView({{behavior: "smooth", block: "center"}});
-          const orig = el.style.boxShadow;
-          let i = 0;
-          const t = setInterval(() => {{
-            el.style.boxShadow = (i % 2 === 0) ? "0 0 0 8px rgba(255,255,0,0.08)" : orig;
-            i++;
-            if (i > 6) {{ clearInterval(t); el.style.boxShadow = orig; }}
-          }}, 180);
-        }}
-      }})();
-    </script>
+    <script>document.getElementById('{bid}').scrollIntoView({{behavior:'smooth',block:'center'}});</script>
     """
-    components.html(html, height=120)
+    components.html(html, height=90)
 
-# ---------------------- user store + history ----------------------
-_default_demo_users = {
+# -------------------- PDF generation utilities --------------------
+def generate_report_bytes(record, title=None):
+    """Return BytesIO containing a PDF (if reportlab installed) or text fallback."""
+    title = title or tr("report_title")
+    if REPORTLAB_AVAILABLE:
+        buf = io.BytesIO()
+        c = canvas.Canvas(buf, pagesize=letter)
+        w, h = letter
+        margin = 40
+        y = h - margin
+        c.setFont("Helvetica-Bold", 18)
+        c.drawString(margin, y, title)
+        y -= 28
+        c.setFont("Helvetica", 11)
+        c.drawString(margin, y, f"{tr('timestamp')}: {record.get('timestamp')}")
+        y -= 18
+        c.drawString(margin, y, f"{tr('model')}: {record.get('model')}")
+        y -= 18
+        c.drawString(margin, y, f"{tr('result')}: {record.get('result')}")
+        y -= 18
+        conf = record.get("confidence")
+        c.drawString(margin, y, f"{tr('confidence')}: {float(conf):.3f}" if conf is not None else f"{tr('confidence')}: {tr('no_model_proba')}")
+        y -= 22
+        c.drawString(margin, y, f"{tr('inputs')}:")
+        y -= 16
+        for k, v in record.get("inputs", {}).items():
+            if y < 80:
+                c.showPage()
+                y = h - margin
+            c.drawString(margin + 6, y, f"- {k}: {v}")
+            y -= 14
+        c.showPage()
+        c.save()
+        buf.seek(0)
+        return buf
+    else:
+        buf = io.BytesIO()
+        lines = []
+        lines.append(title)
+        lines.append("="*len(title))
+        lines.append(f"{tr('timestamp')}: {record.get('timestamp')}")
+        lines.append(f"{tr('model')}: {record.get('model')}")
+        lines.append(f"{tr('result')}: {record.get('result')}")
+        conf = record.get("confidence")
+        lines.append(f"{tr('confidence')}: {float(conf):.3f}" if conf is not None else f"{tr('confidence')}: {tr('no_model_proba')}")
+        lines.append("")
+        lines.append(f"{tr('inputs')}:")
+        for k, v in record.get("inputs", {}).items():
+            lines.append(f" - {k}: {v}")
+        txt = "\n".join(lines)
+        buf.write(txt.encode("utf-8"))
+        buf.seek(0)
+        return buf
+
+# -------------------- Users persistence & helpers --------------------
+_default_users = {
     "admin": {
         "password_hash": hashlib.sha256("admin123".encode()).hexdigest(),
         "name": "Administrator",
         "email": "admin@example.com",
+        "history": []
     },
     "vivek": {
         "password_hash": hashlib.sha256("vivek123".encode()).hexdigest(),
         "name": "Vivek Kumar",
         "email": "vivek@example.com",
+        "history": []
     }
 }
 
 def load_users():
-    if os.path.exists(USER_DB_FILE):
+    if os.path.exists(USERS_JSON):
         try:
-            with open(USER_DB_FILE, "r") as f:
+            with open(USERS_JSON, "r") as f:
                 return json.load(f)
         except Exception:
-            return dict(_default_demo_users)
+            return dict(_default_users)
     else:
-        d = dict(_default_demo_users)
-        for k in d:
-            d[k].setdefault("history", [])
-        return d
+        return dict(_default_users)
 
 def save_users(users):
     try:
-        with open(USER_DB_FILE, "w") as f:
+        with open(USERS_JSON, "w") as f:
             json.dump(users, f, indent=2, default=str)
     except Exception as e:
-        st.warning("Could not save users to disk: " + str(e))
+        st.warning("Failed to save users.json: " + str(e))
 
 _users = load_users()
 
-def canonical_username(u):
+def canonical(u):
     return u.strip().lower() if isinstance(u, str) else u
 
 def verify_user(username, password):
-    key = canonical_username(username)
+    key = canonical(username)
     user = _users.get(key)
     if not user:
         return False
-    return user["password_hash"] == hashlib.sha256(password.encode()).hexdigest()
+    return user.get("password_hash") == hashlib.sha256(password.encode()).hexdigest()
 
 def create_user(username, password, name="", email=""):
-    key = canonical_username(username)
+    key = canonical(username)
     if not username or not password:
-        return False, "Username and password are required"
+        return False, "Username and password required"
     if key in _users:
         return False, "Username already exists"
-    _users[key] = {
-        "password_hash": hashlib.sha256(password.encode()).hexdigest(),
-        "name": name,
-        "email": email,
-        "history": []
-    }
+    _users[key] = {"password_hash": hashlib.sha256(password.encode()).hexdigest(), "name": name, "email": email, "history": []}
     save_users(_users)
     return True, "User created"
 
-def get_user_profile(username):
-    key = canonical_username(username)
-    return _users.get(key, {})
+def get_profile(username):
+    return _users.get(canonical(username), {})
 
-def update_user_profile(username, name="", email=""):
-    key = canonical_username(username)
+def update_profile(username, name="", email=""):
+    key = canonical(username)
     if key in _users:
         _users[key]["name"] = name
         _users[key]["email"] = email
@@ -2068,8 +2848,8 @@ def update_user_profile(username, name="", email=""):
         return True
     return False
 
-def add_history_record(username, record):
-    key = canonical_username(username)
+def add_history(username, record):
+    key = canonical(username)
     if key not in _users:
         return False
     _users[key].setdefault("history", [])
@@ -2078,7 +2858,7 @@ def add_history_record(username, record):
     save_users(_users)
     return True
 
-# ---------------------- auto-detect models in notebook/ ----------------------
+# -------------------- Model discovery --------------------
 def discover_models():
     models = {}
     if not os.path.isdir(MODELS_DIR):
@@ -2094,117 +2874,10 @@ def discover_models():
     return models
 
 MODELS = discover_models()
-MODEL_LABELS = {
-    "diabetes_model": tr("diabetes"),
-    "heart_model": tr("heart"),
-    "parkinsons_model": tr("parkinsons")
-}
-AVAILABLE_MODELS = []
-for key in MODELS:
-    label = MODEL_LABELS.get(key, key.replace("_", " ").title())
-    AVAILABLE_MODELS.append((key, label))
 
-# ---------------------- session defaults ----------------------
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "user" not in st.session_state:
-    st.session_state.user = None
-if "profile" not in st.session_state:
-    st.session_state.profile = {"name": "", "email": ""}
-if "enable_tts" not in st.session_state:
-    st.session_state.enable_tts = True
-if "lang" not in st.session_state:
-    st.session_state.lang = "en"
-
-# ---------------------- Sidebar + styling ----------------------
-st.markdown(
-    """
-    <style>
-    section[data-testid="stSidebar"] > div:first-child {
-      padding: 18px;
-      border-top-right-radius: 14px;
-      border-bottom-right-radius: 14px;
-      background: linear-gradient(180deg,#1f1f23,#19191c);
-    }
-    .stApp > main { padding-top: 8px; }
-    .block-container .stTextInput input, .block-container .stNumberInput input {
-      background: #0f1113;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-with st.sidebar:
-    # language selector: English / Hindi (maps to 'en' / 'hi')
-    lang_choice = st.selectbox("Language / भाषा", options=["English", "Hindi"], index=0 if st.session_state.lang=="en" else 1)
-    st.session_state.lang = "en" if lang_choice == "English" else "hi"
-
-    # menu (use translated labels)
-    menu_items = [
-        tr("home"), tr("diabetes"), tr("heart"), tr("parkinsons"),
-        tr("prediction_history"), tr("admin_dashboard"), tr("profile"), tr("about")
-    ]
-    selected = option_menu(
-        menu_title=None,
-        options=menu_items,
-        icons=["house", "activity", "heart", "person", "clock-history", "speedometer", "person-circle", "info-circle"],
-        menu_icon="cast",
-        default_index=1,
-        orientation="vertical"
-    )
-
-    st.markdown("---")
-    # Account area
-    if st.session_state.logged_in:
-        st.markdown(f"**{tr('username')}:** {st.session_state.user}")
-        if st.button(tr("logout")):
-            st.session_state.logged_in = False
-            st.session_state.user = None
-            st.session_state.profile = {"name": "", "email": ""}
-            st.success(tr("logout"))
-    else:
-        st.markdown("**Account**")
-        acc_choice = st.radio("", (tr("login"), tr("register")))
-        if acc_choice == tr("login"):
-            user_in = st.text_input(tr("username"), key="login_username")
-            pw_in = st.text_input(tr("password"), type="password", key="login_password")
-            if st.button(tr("sign_in")):
-                if verify_user(user_in, pw_in):
-                    st.session_state.logged_in = True
-                    st.session_state.user = canonical_username(user_in)
-                    profile_data = get_user_profile(user_in)
-                    st.session_state.profile = {"name": profile_data.get("name", ""), "email": profile_data.get("email", "")}
-                    st.success(f"Welcome, {st.session_state.profile.get('name') or st.session_state.user}!")
-                else:
-                    st.error("Invalid username or password")
-        else:
-            new_user = st.text_input(tr("username"), key="reg_user")
-            new_pw = st.text_input(tr("password"), type="password", key="reg_pw")
-            new_name = st.text_input(tr("profile"), placeholder="Full name (optional)", key="reg_name")
-            new_email = st.text_input("Email (optional)", key="reg_email")
-            if st.button(tr("create_account")):
-                ok, msg = create_user(new_user, new_pw, new_name, new_email)
-                if ok:
-                    st.success("Account created. Please log in.")
-                else:
-                    st.error(msg)
-
-    st.markdown("---")
-    st.checkbox(tr("enable_tts"), key="enable_tts", value=st.session_state.get("enable_tts", True))
-    st.markdown("---")
-    st.write("Available models:")
-    for key, label in AVAILABLE_MODELS:
-        st.write(f"- **{label}**  (_{MODELS[key]['filename']}_)")
-    st.write("Tip: drop more `.pkl` files into the `notebook/` folder and restart the app.")
-
-# ---------------------- helper functions ----------------------
-def ensure_logged_in():
-    if not st.session_state.logged_in:
-        st.warning("Please log in to use prediction features. Use the sidebar Account -> Login.")
-        st.stop()
-
+# -------------------- Helper for model prediction + confidence --------------------
 def model_predict_and_confidence(model_obj, X):
+    """Return (pred_label:int, confidence:float|None)"""
     pred = model_obj.predict(X)
     conf = None
     try:
@@ -2214,360 +2887,412 @@ def model_predict_and_confidence(model_obj, X):
         elif hasattr(model_obj, "decision_function"):
             df = model_obj.decision_function(X)
             conf = float(1 / (1 + np.exp(-float(df[0]))))
-        else:
-            conf = None
     except Exception:
         conf = None
     return int(pred[0]), conf
 
-def generate_pdf_bytes(user, record):
-    if REPORTLAB_AVAILABLE:
-        buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=letter)
-        width, height = letter
-        margin = 40
-        y = height - margin
-        c.setFont("Helvetica-Bold", 18)
-        c.drawString(margin, y, tr("report_title"))
-        y -= 30
-        c.setFont("Helvetica", 11)
-        c.drawString(margin, y, f"{tr('timestamp')}: {record.get('timestamp')}")
-        y -= 20
-        c.drawString(margin, y, f"{tr('model')}: {record.get('model')}")
-        y -= 20
-        c.drawString(margin, y, f"{tr('result')}: {record.get('result')}")
-        y -= 20
-        conf_text = f"{tr('confidence')}: {record.get('confidence'):.3f}" if record.get("confidence") is not None else f"{tr('confidence')}: {tr('no_model_proba')}"
-        c.drawString(margin, y, conf_text)
-        y -= 26
-        c.drawString(margin, y, f"{tr('inputs')}:")
-        y -= 16
-        inputs = record.get("inputs", {})
-        for k, v in inputs.items():
-            s = f" - {k}: {v}"
-            if y < 80:
-                c.showPage()
-                y = height - margin
-            c.drawString(margin + 6, y, s)
-            y -= 14
-        c.showPage()
-        c.save()
-        buffer.seek(0)
-        return buffer
-    else:
-        buffer = io.BytesIO()
-        txt_lines = []
-        txt_lines.append(tr("report_title"))
-        txt_lines.append("="*len(tr("report_title")))
-        txt_lines.append(f"{tr('timestamp')}: {record.get('timestamp')}")
-        txt_lines.append(f"{tr('model')}: {record.get('model')}")
-        txt_lines.append(f"{tr('result')}: {record.get('result')}")
-        if record.get("confidence") is not None:
-            txt_lines.append(f"{tr('confidence')}: {record.get('confidence'):.3f}")
-        else:
-            txt_lines.append(f"{tr('confidence')}: {tr('no_model_proba')}")
-        txt_lines.append("")
-        txt_lines.append(f"{tr('inputs')}:")
-        for k, v in record.get("inputs", {}).items():
-            txt_lines.append(f" - {k}: {v}")
-        s = "\n".join(txt_lines)
-        buffer.write(s.encode("utf-8"))
-        buffer.seek(0)
-        return buffer
+# -------------------- UI components: Navbar, footer, contact --------------------
+def show_navbar(default_index=0):
+    items = [tr("home"), tr("diabetes"), tr("heart"), tr("parkinsons"), tr("prediction_history"), tr("admin_dashboard"), tr("profile"), tr("about"), tr("contact")]
+    icons = ["house","activity","heart","person","clock-history","speedometer","person-circle","info-circle","envelope"]
+    sel = option_menu(menu_title=None, options=items, icons=icons, menu_icon="cast", default_index=default_index, orientation="vertical")
+    return sel
 
-# ---------------------- Pages ----------------------
-if selected == tr("home"):
-    show_home_hero_and_scroll()
-    st.write("## " + tr("home"))
+def show_footer():
+    st.markdown("---")
+    st.markdown("<div style='text-align:center;color:#9aa0a6;padding:8px 0;'>© Multi-Disease Prediction • Built with Streamlit</div>", unsafe_allow_html=True)
+
+def show_contact():
+    st.title(tr("contact"))
+    st.write("If you need help, email support@yourdomain.com")
+    st.write("Or leave a message below:")
+    name = st.text_input("Your name")
+    email = st.text_input("Your email")
+    msg = st.text_area("Message")
+    if st.button("Send Message"):
+        st.success("Message received — we'll get back to you.")
+
+# -------------------- Sidebar: language + auth + models list + tts --------------------
+with st.sidebar:
+    lang_choice = st.selectbox("Language / भाषा", options=["English","Hindi"], index=0 if st.session_state.lang=="en" else 1)
+    st.session_state.lang = "en" if lang_choice == "English" else "hi"
+
+    # show account box
+    st.markdown("### Account")
+    if st.session_state.logged_in:
+        st.write(f"**{tr('username')}:** {st.session_state.user}")
+        if st.button(tr("logout")):
+            st.session_state.logged_in = False
+            st.session_state.user = None
+            st.session_state.profile = {"name":"","email":""}
+            st.success(tr("logout"))
+    else:
+        acc_mode = st.radio("", (tr("login"), tr("register")))
+        if acc_mode == tr("login"):
+            user_in = st.text_input(tr("username"), key="sb_user")
+            pw_in = st.text_input(tr("password"), type="password", key="sb_pw")
+            if st.button(tr("sign_in")):
+                if verify_user(user_in, pw_in):
+                    st.session_state.logged_in = True
+                    st.session_state.user = canonical(user_in)
+                    pr = get_profile(user_in)
+                    st.session_state.profile = {"name":pr.get("name",""), "email":pr.get("email","")}
+                    st.success(f"Welcome, {st.session_state.profile.get('name') or st.session_state.user}!")
+                else:
+                    st.error("Invalid username or password")
+        else:
+            new_user = st.text_input(tr("username"), key="sb_reg_user")
+            new_pw = st.text_input(tr("password"), type="password", key="sb_reg_pw")
+            new_name = st.text_input("Full name (optional)", key="sb_reg_name")
+            new_email = st.text_input("Email (optional)", key="sb_reg_email")
+            if st.button(tr("create_account")):
+                ok,msg = create_user(new_user, new_pw, new_name, new_email)
+                if ok:
+                    st.success("Account created. Please login.")
+                else:
+                    st.error(msg)
+
+    st.markdown("---")
+    # tts toggle (do NOT reassign session_state in same call)
+    st.checkbox(tr("enable_tts"), key="enable_tts", value=st.session_state.get("enable_tts", True))
+    st.markdown("---")
+    st.write("Available models:")
+    if MODELS:
+        for k, v in MODELS.items():
+            st.write(f"- **{k.replace('_',' ').title()}**  (_{v['filename']}_)")
+    else:
+        st.write("- No models found. Drop .pkl files into notebook/")
+
+# -------------------- Page functions --------------------
+def require_login():
+    if not st.session_state.logged_in:
+        st.warning("Please log in to use this page.")
+        st.stop()
+
+def page_home():
+    banner_hero()
+    st.header(tr("home"))
     st.write(tr("app_sub"))
-    st.write("---")
-    st.write("Demo accounts: `admin` / `admin123`, `vivek` / `vivek123`")
-    st.write("To add more disease models, put their `.pkl` files into `notebook/` and restart the app.")
+    st.write("Use the left menu to navigate. Demo accounts: admin/admin123, vivek/vivek123.")
+    show_footer()
 
-# Prediction pages (unified)
-if selected in [tr("diabetes"), tr("heart"), tr("parkinsons")]:
-    ensure_logged_in()
-    show_home_hero_and_scroll()
-    st.markdown(f"<h1 style='color:white'>{selected}</h1>", unsafe_allow_html=True)
-    st.write("Fill features below. Numeric placeholders example values are shown.")
+def page_contact():
+    banner_hero()
+    show_contact()
+    show_footer()
 
-    # Determine model key
-    desired_label = selected
-    model_key = None
-    for k, label in AVAILABLE_MODELS:
-        if label.lower() == desired_label.lower() or k.lower().find(desired_label.split()[0].lower()) != -1:
-            model_key = k
-            break
-    if model_key is None and AVAILABLE_MODELS:
-        model_key = AVAILABLE_MODELS[0][0]
-
-    # DIABETES
-    if "diabetes" in model_key:
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            Pregnancies = st.number_input("Number of Pregnancies", min_value=0.0, max_value=50.0, value=0.0, step=1.0)
-        with col2:
-            Glucose = st.number_input("Glucose Level (mg/dl)", min_value=0.0, value=120.0)
-        with col3:
-            BloodPressure = st.number_input("BloodPressure (mm Hg)", min_value=0.0, value=70.0)
-        with col1:
-            SkinThickness = st.number_input("SkinThickness (mm)", min_value=0.0, value=20.0)
-        with col2:
-            Insulin = st.number_input("Insulin (IU)", min_value=0.0, value=80.0)
-        with col3:
-            BMI = st.number_input("BMI (kg/m2)", min_value=0.0, value=28.5)
-        with col1:
-            DiabetesPedigreeFunction = st.number_input("DiabetesPedigreeFunction", min_value=0.0, value=0.5)
-        with col2:
-            Age = st.number_input("Age (years)", min_value=0.0, value=45.0)
-
-        if st.button("Diabetes Test Result"):
-            try:
-                raw_features = [Pregnancies, Glucose, BloodPressure, SkinThickness, Insulin, BMI, DiabetesPedigreeFunction, Age]
-                NewBMI_Overweight = NewBMI_Underweight = NewBMI_Obesity_1 = NewBMI_Obesity_2 = NewBMI_Obesity_3 = 0
-                NewInsulinScore_Normal = NewGlucose_Low = NewGlucose_Normal = NewGlucose_Overweight = NewGlucose_Secret = 0
-                b = BMI
-                if b <= 18.5:
-                    NewBMI_Underweight = 1
-                elif 18.5 < b <= 24.9:
-                    pass
-                elif 24.9 < b <= 29.9:
-                    NewBMI_Overweight = 1
-                elif 29.9 < b <= 34.9:
-                    NewBMI_Obesity_1 = 1
-                elif 34.9 < b <= 39.9:
-                    NewBMI_Obesity_2 = 1
-                else:
-                    NewBMI_Obesity_3 = 1
-                if 16 <= Insulin <= 166:
-                    NewInsulinScore_Normal = 1
-                g = Glucose
-                if g <= 70:
-                    NewGlucose_Low = 1
-                elif 70 < g <= 99:
-                    NewGlucose_Normal = 1
-                elif 99 < g <= 126:
-                    NewGlucose_Overweight = 1
-                else:
-                    NewGlucose_Secret = 1
-
-                engineered_flags = [NewBMI_Underweight, NewBMI_Overweight, NewBMI_Obesity_1,
-                                    NewBMI_Obesity_2, NewBMI_Obesity_3, NewInsulinScore_Normal,
-                                    NewGlucose_Low, NewGlucose_Normal, NewGlucose_Overweight, NewGlucose_Secret]
-                full_input = raw_features + engineered_flags
-
-                model_obj = MODELS[model_key]["model"]
-                expected = getattr(model_obj, "n_features_in__", None)
-                if expected is None:
-                    try:
-                        X = np.array(raw_features, dtype=float).reshape(1, -1)
-                        pred, conf = model_predict_and_confidence(model_obj, X)
-                    except Exception:
-                        X = np.array(full_input, dtype=float).reshape(1, -1)
-                        pred, conf = model_predict_and_confidence(model_obj, X)
-                else:
-                    if expected == len(raw_features):
-                        X = np.array(raw_features, dtype=float).reshape(1, -1)
-                        pred, conf = model_predict_and_confidence(model_obj, X)
-                    elif expected == len(full_input):
-                        X = np.array(full_input, dtype=float).reshape(1, -1)
-                        pred, conf = model_predict_and_confidence(model_obj, X)
-                    else:
-                        st.error(f"Model expects {expected} features. Raw={len(raw_features)}, Full={len(full_input)}.")
-                        st.stop()
-
-                if pred == 1:
-                    res = "The person has diabetes"
-                    positive = True
-                else:
-                    res = "The person does not have diabetes"
-                    positive = False
-
-                show_highlighted_result_and_scroll(res, positive=positive)
-                if st.session_state.get("enable_tts", True):
-                    speak(res)
-
-                record = {
-                    "id": str(uuid.uuid4()),
-                    "model": MODELS[model_key]["filename"],
-                    "model_key": model_key,
-                    "inputs": dict(zip(["Pregnancies","Glucose","BloodPressure","SkinThickness","Insulin","BMI","DPF","Age"], raw_features)),
-                    "result": res,
-                    "confidence": conf,
-                    "timestamp": datetime.now().isoformat()
-                }
-                add_history_record(st.session_state.user, record)
-                buf = generate_pdf_bytes(st.session_state.user, record)
-                bname = f"report_{record['id']}.pdf" if REPORTLAB_AVAILABLE else f"report_{record['id']}.txt"
-                st.download_button(tr("download_report"), data=buf, file_name=bname, mime="application/octet-stream")
-            except Exception as e:
-                st.error(tr("error_fill") + str(e))
-
-    # HEART
-    elif "heart" in model_key:
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            age = st.number_input("Age", min_value=0.0, value=54.0)
-        with col2:
-            sex = st.selectbox("Sex (1=male,0=female)", options=[1,0], index=0)
-        with col3:
-            cp = st.number_input("Chest Pain Types (0-3)", min_value=0.0, max_value=3.0, value=1.0)
-        with col1:
-            trtbps = st.number_input("Resting Blood Pressure (mm Hg)", min_value=0.0, value=130.0)
-        with col2:
-            chol = st.number_input("Cholesterol (mg/dl)", min_value=0.0, value=233.0)
-        with col3:
-            fbs = st.selectbox("Fasting blood sugar > 120 mg/dl (1=true,0=false)", options=[0,1], index=0)
-        with col1:
-            restecg = st.number_input("Resting ECG (0/1/2)", min_value=0.0, max_value=2.0, value=0.0)
-        with col2:
-            thalachh = st.number_input("Max Heart Rate (thalach)", min_value=0.0, value=150.0)
-        with col3:
-            exng = st.selectbox("Exercise Induced Angina (1=yes,0=no)", options=[0,1], index=0)
-        with col1:
-            oldpeak = st.number_input("ST depression (oldpeak)", value=1.2)
-        with col2:
-            slp = st.number_input("Slope (0/1/2)", min_value=0.0, max_value=2.0, value=1.0)
-        with col3:
-            caa = st.number_input("Major vessels colored by flourosopy (0-3)", min_value=0.0, max_value=3.0, value=0.0)
-        with col1:
-            thall = st.number_input("thal (0 normal,1 fixed,2 reversible)", min_value=0.0, max_value=2.0, value=1.0)
-
-        if st.button("Heart Disease Test Result"):
-            try:
-                vals = [age, sex, cp, trtbps, chol, fbs, restecg, thalachh, exng, oldpeak, slp, caa, thall]
-                model_obj = MODELS[model_key]["model"]
-                Xh = np.array(vals, dtype=float).reshape(1, -1)
-                expected_h = getattr(model_obj, "n_features_in__", None)
-                if expected_h is not None and Xh.shape[1] != expected_h:
-                    st.error(f"Model expects {expected_h} features but input has {Xh.shape[1]}.")
-                    st.stop()
-                pred_h, conf = model_predict_and_confidence(model_obj, Xh)
-                if pred_h == 1:
-                    res = "This person is having heart disease"
-                    pos = True
-                else:
-                    res = "This person does not have any heart disease"
-                    pos = False
-                show_highlighted_result_and_scroll(res, positive=pos)
-                if st.session_state.get("enable_tts", True): speak(res)
-                record = {
-                    "id": str(uuid.uuid4()), "model": MODELS[model_key]["filename"], "model_key": model_key,
-                    "inputs": {"age": age, "sex": sex, "cp": cp, "trtbps": trtbps, "chol": chol, "fbs": fbs,
-                               "restecg": restecg, "thalachh": thalachh, "exng": exng, "oldpeak": oldpeak,
-                               "slp": slp, "caa": caa, "thall": thall},
-                    "result": res, "confidence": conf, "timestamp": datetime.now().isoformat()
-                }
-                add_history_record(st.session_state.user, record)
-                buf = generate_pdf_bytes(st.session_state.user, record)
-                bname = f"report_{record['id']}.pdf" if REPORTLAB_AVAILABLE else f"report_{record['id']}.txt"
-                st.download_button(tr("download_report"), data=buf, file_name=bname, mime="application/octet-stream")
-            except Exception as e:
-                st.error(tr("error_fill") + str(e))
-
-    # PARKINSONS OR OTHER
-    else:
-        if "parkinsons" in model_key:
-            st.write("Enter 22 voice-feature numeric fields (see model training spec).")
-            cols = st.columns(4)
-            labels = ["MDVP:Fo(Hz)","MDVP:Fhi(Hz)","MDVP:Flo(Hz)","MDVP:Jitter(%)","MDVP:Jitter(Abs)","MDVP:RAP","MDVP:PPQ","Jitter:DDP",
-                      "MDVP:Shimmer","MDVP:Shimmer(dB)","Shimmer:APQ3","Shimmer:APQ5","MDVP:APQ","Shimmer:DDA","NHR","HNR","RPDE","DFA","spread1","spread2","D2","PPE"]
-            inputs = []
-            for i, label in enumerate(labels):
-                col = cols[i % 4]
-                inputs.append(col.number_input(label, value=0.0))
-            if st.button("Parkinsons's Test Result"):
-                try:
-                    numeric_vals = [float(x) for x in inputs]
-                    Xp = np.array(numeric_vals).reshape(1, -1)
-                    model_obj = MODELS[model_key]["model"]
-                    expected_p = getattr(model_obj, "n_features_in__", None)
-                    if expected_p is not None and Xp.shape[1] != expected_p:
-                        st.error(f"Model expects {expected_p} features but input has {Xp.shape[1]}.")
-                        st.stop()
-                    pred_p, conf = model_predict_and_confidence(model_obj, Xp)
-                    if pred_p == 1:
-                        res = "This person has Parkinsons disease"
-                        pos = True
-                    else:
-                        res = "This person does not have Parkinsons disease"
-                        pos = False
-                    show_highlighted_result_and_scroll(res, positive=pos)
-                    if st.session_state.get("enable_tts", True): speak(res)
-                    record = {"id": str(uuid.uuid4()), "model": MODELS[model_key]["filename"], "model_key": model_key,
-                              "inputs": dict(zip(labels, numeric_vals)), "result": res, "confidence": conf, "timestamp": datetime.now().isoformat()}
-                    add_history_record(st.session_state.user, record)
-                    buf = generate_pdf_bytes(st.session_state.user, record)
-                    bname = f"report_{record['id']}.pdf" if REPORTLAB_AVAILABLE else f"report_{record['id']}.txt"
-                    st.download_button(tr("download_report"), data=buf, file_name=bname, mime="application/octet-stream")
-                except Exception as e:
-                    st.error(tr("error_fill") + str(e))
-        else:
-            st.write("Custom model detected. Enter comma-separated numeric features matching the model training schema.")
-            raw = st.text_area("Comma-separated numeric features (one sample)", placeholder="e.g. 5,124,70,... ")
-            if st.button("Predict with custom model"):
-                try:
-                    vals = [float(x.strip()) for x in raw.split(",") if x.strip() != ""]
-                    if len(vals) == 0:
-                        st.error("Please enter numeric CSV values.")
-                        st.stop()
-                    model_obj = MODELS[model_key]["model"]
-                    X = np.array(vals, dtype=float).reshape(1, -1)
-                    expected = getattr(model_obj, "n_features_in__", None)
-                    if expected is not None and X.shape[1] != expected:
-                        st.error(f"Model expects {expected} features but input has {X.shape[1]}.")
-                        st.stop()
-                    pred, conf = model_predict_and_confidence(model_obj, X)
-                    res = f"Predicted label: {pred}"
-                    show_highlighted_result_and_scroll(res, positive=True)
-                    if st.session_state.get("enable_tts", True):
-                        speak(res)
-                    record = {"id": str(uuid.uuid4()), "model": MODELS[model_key]["filename"], "model_key": model_key,
-                              "inputs": {"csv": vals}, "result": res, "confidence": conf, "timestamp": datetime.now().isoformat()}
-                    add_history_record(st.session_state.user, record)
-                    buf = generate_pdf_bytes(st.session_state.user, record)
-                    bname = f"report_{record['id']}.pdf" if REPORTLAB_AVAILABLE else f"report_{record['id']}.txt"
-                    st.download_button(tr("download_report"), data=buf, file_name=bname, mime="application/octet-stream")
-                except Exception as e:
-                    st.error("Prediction failed: " + str(e))
-
-# Prediction history page
-if selected == tr("prediction_history"):
-    ensure_logged_in()
-    st.title(tr("prediction_history"))
-    profile = get_user_profile(st.session_state.user)
+def page_profile():
+    require_login()
+    banner_hero()
+    st.header(tr("profile"))
+    username = st.session_state.user
+    profile = get_profile(username)
+    name = st.text_input("Full name", value=profile.get("name",""), key="pf_name")
+    email = st.text_input("Email", value=profile.get("email",""), key="pf_email")
+    if st.button("Save profile"):
+        update_profile(username, name=name, email=email)
+        st.session_state.profile = {"name":name, "email":email}
+        st.success("Profile updated")
+    st.markdown("---")
+    if st.button("Logout"):
+        st.session_state.logged_in = False
+        st.session_state.user = None
+        st.session_state.profile = {"name":"","email":""}
+        st.success("Logged out")
+    st.markdown("### Recent predictions")
     history = profile.get("history", [])
     if not history:
-        st.info("No prediction history yet. Run a prediction to create records.")
+        st.info("No prediction history yet.")
     else:
+        for rec in history[:10]:
+            st.write(f"- {rec.get('timestamp')} — {rec.get('model')} — {rec.get('result')}")
+    show_footer()
+
+def page_prediction_history():
+    require_login()
+    banner_hero()
+    st.header(tr("prediction_history"))
+    profile = get_profile(st.session_state.user)
+    history = profile.get("history", [])
+    if not history:
+        st.info("No prediction history yet.")
+    else:
+        st.write(f"Total records: {len(history)}")
         for rec in history:
-            st.write(f"**{rec.get('timestamp')}**  —  {rec.get('model')}  —  {rec.get('result')}")
-            st.write(f"Confidence: {rec.get('confidence') if rec.get('confidence') is not None else tr('no_model_proba')}")
-            with st.expander("Inputs"):
+            ts = rec.get("timestamp")
+            model = rec.get("model")
+            result = rec.get("result")
+            conf = rec.get("confidence")
+            with st.expander(f"{ts} — {model} — {result} — conf: {conf if conf is not None else tr('no_model_proba')}"):
+                st.write("**Result**")
+                st.write(result)
+                st.write("**Inputs**")
                 st.json(rec.get("inputs", {}))
-            buf = generate_pdf_bytes(st.session_state.user, rec)
-            st.download_button("Download report", data=buf, file_name=f"report_{rec.get('id')}.pdf" if REPORTLAB_AVAILABLE else f"report_{rec.get('id')}.txt", mime="application/octet-stream")
+                buf = generate_report_bytes(rec)
+                fname = f"report_{rec.get('id') or ts}.pdf" if REPORTLAB_AVAILABLE else f"report_{rec.get('id') or ts}.txt"
+                st.download_button(tr("download_report"), data=buf, file_name=fname, mime="application/octet-stream")
+    if st.button("Export full history (CSV)"):
+        import csv
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(["id","timestamp","model","result","confidence","inputs"])
+        for rec in history:
+            writer.writerow([rec.get("id"), rec.get("timestamp"), rec.get("model"), rec.get("result"), rec.get("confidence"), json.dumps(rec.get("inputs"))])
+        st.download_button("Download CSV", data=buf.getvalue().encode("utf-8"), file_name=f"{st.session_state.user}_history.csv", mime="text/csv")
+    show_footer()
 
-# Admin dashboard: replaced inline page with separate file call
-if selected == tr("admin_dashboard"):
-    ensure_logged_in()
-    # call the external admin_dashboard.show_admin_dashboard
-    show_admin_dashboard(st.session_state.user, _users, MODELS)
+def page_admin_dashboard():
+    require_login()
+    # only admin allowed
+    if canonical(st.session_state.user) != "admin":
+        st.warning("Admin dashboard is restricted to admin user.")
+        st.stop()
+    banner_hero()
+    st.header("Admin Dashboard")
+    total_users = len(_users)
+    total_preds = sum(len(u.get("history", [])) for u in _users.values())
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total users", total_users)
+    c2.metric("Total predictions", total_preds)
+    c3.metric("Loaded models", len(MODELS))
+    st.markdown("---")
+    # counts per model
+    counts = {}
+    for u in _users.values():
+        for rec in u.get("history", []):
+            m = rec.get("model", "unknown")
+            counts[m] = counts.get(m, 0) + 1
+    st.markdown("### Predictions per model")
+    if counts:
+        rows = [{"model":m, "count":counts[m]} for m in counts]
+        st.table(rows)
+        try:
+            import pandas as pd
+            df = pd.DataFrame(rows).set_index("model")
+            st.bar_chart(df)
+        except Exception:
+            for m,v in counts.items():
+                st.write(f"- {m}: {v}")
+    else:
+        st.info("No predictions yet.")
+    st.markdown("---")
+    st.markdown("### Registered users")
+    for uname, u in _users.items():
+        with st.expander(f"{uname} — {u.get('name','')} — {len(u.get('history',[]))} predictions"):
+            st.write(f"Name: {u.get('name','')}")
+            st.write(f"Email: {u.get('email','')}")
+            hist = u.get("history", [])
+            if not hist: st.info("No history")
+            else:
+                for rec in hist[:20]:
+                    st.write(f"- {rec.get('timestamp')} — {rec.get('model')} — {rec.get('result')} — conf: {rec.get('confidence')}")
+                if st.button(f"Download {uname} history CSV", key=f"dl_{uname}"):
+                    import csv
+                    b = io.StringIO()
+                    w = csv.writer(b)
+                    w.writerow(["id","timestamp","model","result","confidence","inputs"])
+                    for rec in hist:
+                        w.writerow([rec.get("id"), rec.get("timestamp"), rec.get("model"), rec.get("result"), rec.get("confidence"), json.dumps(rec.get("inputs"))])
+                    st.download_button("Download now", data=b.getvalue().encode("utf-8"), file_name=f"{uname}_history.csv", mime="text/csv")
+    st.markdown("---")
+    if st.button("Export all users (JSON)"):
+        st.download_button("Download users.json", data=json.dumps(_users, indent=2), file_name="users_export.json", mime="application/json")
+    if st.button("Clear all histories (in memory)"):
+        for k in _users:
+            _users[k]["history"] = []
+        st.success("Histories cleared in memory; save users.json to persist.")
+    show_footer()
 
-# Profile & About
-if selected == tr("profile"):
-    ensure_logged_in()
-    st.title(tr("profile"))
-    name = st.text_input("Full name", value=st.session_state.profile.get("name",""), key="profile_name")
-    email = st.text_input("Email", value=st.session_state.profile.get("email",""), key="profile_email")
-    if st.button("Save profile"):
-        st.session_state.profile["name"] = name
-        st.session_state.profile["email"] = email
-        update_user_profile(st.session_state.user, name=name, email=email)
-        st.success("Profile updated")
-    st.write("Current session user:", st.session_state.user)
+# -------------------- Prediction pages --------------------
+def page_diabetes():
+    require_login()
+    banner_hero()
+    st.header(tr("diabetes"))
+    col1, col2, col3 = st.columns(3)
+    with col1: Pregnancies = st.number_input("Number of Pregnancies", min_value=0.0, max_value=50.0, value=0.0, step=1.0)
+    with col2: Glucose = st.number_input("Glucose Level (mg/dl)", min_value=0.0, value=120.0)
+    with col3: BloodPressure = st.number_input("BloodPressure (mm Hg)", min_value=0.0, value=70.0)
+    with col1: SkinThickness = st.number_input("SkinThickness (mm)", min_value=0.0, value=20.0)
+    with col2: Insulin = st.number_input("Insulin (IU)", min_value=0.0, value=80.0)
+    with col3: BMI = st.number_input("BMI (kg/m2)", min_value=0.0, value=28.5)
+    with col1: DiabetesPedigreeFunction = st.number_input("DiabetesPedigreeFunction", min_value=0.0, value=0.5)
+    with col2: Age = st.number_input("Age (years)", min_value=0.0, value=45.0)
 
-if selected == tr("about"):
-    st.title(tr("about"))
-    st.write("This enhanced app includes: downloadable reports, prediction history, admin dashboard, confidence scores, UI improvements, multi-language support, and more.")
-    st.write("To add new models: drop their `.pkl` files into the `notebook/` folder and restart the app.")
+    if st.button("Diabetes Test Result"):
+        try:
+            raw = [Pregnancies, Glucose, BloodPressure, SkinThickness, Insulin, BMI, DiabetesPedigreeFunction, Age]
+            # flags
+            NewBMI_Overweight = NewBMI_Underweight = NewBMI_Obesity_1 = NewBMI_Obesity_2 = NewBMI_Obesity_3 = 0
+            NewInsulinScore_Normal = NewGlucose_Low = NewGlucose_Normal = NewGlucose_Overweight = NewGlucose_Secret = 0
+            b = BMI
+            if b <= 18.5: NewBMI_Underweight = 1
+            elif 18.5 < b <= 24.9: pass
+            elif 24.9 < b <= 29.9: NewBMI_Overweight = 1
+            elif 29.9 < b <= 34.9: NewBMI_Obesity_1 = 1
+            elif 34.9 < b <= 39.9: NewBMI_Obesity_2 = 1
+            else: NewBMI_Obesity_3 = 1
+            if 16 <= Insulin <= 166: NewInsulinScore_Normal = 1
+            g = Glucose
+            if g <= 70: NewGlucose_Low = 1
+            elif 70 < g <= 99: NewGlucose_Normal = 1
+            elif 99 < g <= 126: NewGlucose_Overweight = 1
+            else: NewGlucose_Secret = 1
+            engineered = [NewBMI_Underweight, NewBMI_Overweight, NewBMI_Obesity_1, NewBMI_Obesity_2, NewBMI_Obesity_3, NewInsulinScore_Normal, NewGlucose_Low, NewGlucose_Normal, NewGlucose_Overweight, NewGlucose_Secret]
+            full = raw + engineered
+            # find model
+            model_key = None
+            for k in MODELS:
+                if "diabetes" in k.lower(): model_key = k; break
+            if model_key is None:
+                st.error("Diabetes model not found.")
+                return
+            model_obj = MODELS[model_key]["model"]
+            expected = getattr(model_obj, "n_features_in__", None)
+            if expected is None:
+                try:
+                    X = np.array(raw, dtype=float).reshape(1, -1)
+                    pred, conf = model_predict_and_confidence(model_obj, X)
+                except Exception:
+                    X = np.array(full, dtype=float).reshape(1, -1)
+                    pred, conf = model_predict_and_confidence(model_obj, X)
+            else:
+                if expected == len(raw): X = np.array(raw, dtype=float).reshape(1,-1); pred, conf = model_predict_and_confidence(model_obj, X)
+                elif expected == len(full): X = np.array(full, dtype=float).reshape(1,-1); pred, conf = model_predict_and_confidence(model_obj, X)
+                else:
+                    st.error(f"Model expects {expected} features (raw {len(raw)} / full {len(full)})."); return
+            if pred == 1:
+                res = "The person has diabetes"; pos=True
+            else:
+                res = "The person does not have diabetes"; pos=False
+            result_banner(res, positive=pos)
+            if st.session_state.get("enable_tts", True): speak(res)
+            record = {"id": str(uuid.uuid4()), "model": MODELS[model_key]["filename"], "model_key": model_key, "inputs": dict(zip(["Pregnancies","Glucose","BloodPressure","SkinThickness","Insulin","BMI","DPF","Age"], raw)), "result": res, "confidence": conf, "timestamp": datetime.now().isoformat()}
+            add_history(st.session_state.user, record)
+            buf = generate_report_bytes(record)
+            fname = f"report_{record['id']}.pdf" if REPORTLAB_AVAILABLE else f"report_{record['id']}.txt"
+            st.download_button(tr("download_report"), data=buf, file_name=fname, mime="application/octet-stream")
+        except Exception as e:
+            st.error(tr("error_fill") + str(e))
+
+    show_footer()
+
+def page_heart():
+    require_login()
+    banner_hero()
+    st.header(tr("heart"))
+    col1,col2,col3 = st.columns(3)
+    with col1: age = st.number_input("Age", min_value=0.0, value=54.0)
+    with col2: sex = st.selectbox("Sex (1=male,0=female)", options=[1,0], index=0)
+    with col3: cp = st.number_input("Chest Pain Types (0-3)", min_value=0.0, max_value=3.0, value=1.0)
+    with col1: trtbps = st.number_input("Resting Blood Pressure (mm Hg)", value=130.0)
+    with col2: chol = st.number_input("Cholesterol (mg/dl)", value=233.0)
+    with col3: fbs = st.selectbox("Fasting blood sugar >120 (1=yes,0=no)", options=[0,1], index=0)
+    with col1: restecg = st.number_input("Resting ECG (0/1/2)", min_value=0.0, max_value=2.0, value=0.0)
+    with col2: thalachh = st.number_input("Max Heart Rate (thalach)", value=150.0)
+    with col3: exng = st.selectbox("Exercise Induced Angina (1=yes,0=no)", options=[0,1], index=0)
+    with col1: oldpeak = st.number_input("ST depression (oldpeak)", value=1.2)
+    with col2: slp = st.number_input("Slope (0/1/2)", min_value=0.0, max_value=2.0, value=1.0)
+    with col3: caa = st.number_input("Major vessels colored (0-3)", min_value=0.0, max_value=3.0, value=0.0)
+    with col1: thall = st.number_input("thal (0 normal,1 fixed,2 reversible)", min_value=0.0, max_value=2.0, value=1.0)
+
+    if st.button("Heart Disease Test Result"):
+        try:
+            vals = [age,sex,cp,trtbps,chol,fbs,restecg,thalachh,exng,oldpeak,slp,caa,thall]
+            model_key = None
+            for k in MODELS:
+                if "heart" in k.lower(): model_key = k; break
+            if model_key is None:
+                st.error("Heart model not found."); return
+            model_obj = MODELS[model_key]["model"]
+            X = np.array(vals, dtype=float).reshape(1,-1)
+            expected = getattr(model_obj, "n_features_in__", None)
+            if expected is not None and X.shape[1] != expected:
+                st.error(f"Model expects {expected} features but input has {X.shape[1]}."); return
+            pred, conf = model_predict_and_confidence(model_obj, X)
+            if pred == 1:
+                res = "This person is having heart disease"; pos=True
+            else:
+                res = "This person does not have any heart disease"; pos=False
+            result_banner(res, positive=pos)
+            if st.session_state.get("enable_tts", True): speak(res)
+            record = {"id": str(uuid.uuid4()), "model": MODELS[model_key]["filename"], "model_key": model_key, "inputs": {"age":age,"sex":sex,"cp":cp,"trtbps":trtbps,"chol":chol,"fbs":fbs,"restecg":restecg,"thalachh":thalachh,"exng":exng,"oldpeak":oldpeak,"slp":slp,"caa":caa,"thall":thall}, "result": res, "confidence": conf, "timestamp": datetime.now().isoformat()}
+            add_history(st.session_state.user, record)
+            buf = generate_report_bytes(record)
+            fname = f"report_{record['id']}.pdf" if REPORTLAB_AVAILABLE else f"report_{record['id']}.txt"
+            st.download_button(tr("download_report"), data=buf, file_name=fname, mime="application/octet-stream")
+        except Exception as e:
+            st.error(tr("error_fill") + str(e))
+
+    show_footer()
+
+def page_parkinsons():
+    require_login()
+    banner_hero()
+    st.header(tr("parkinsons"))
+    cols = st.columns(4)
+    labels = ["MDVP:Fo(Hz)","MDVP:Fhi(Hz)","MDVP:Flo(Hz)","MDVP:Jitter(%)","MDVP:Jitter(Abs)","MDVP:RAP","MDVP:PPQ","Jitter:DDP","MDVP:Shimmer","MDVP:Shimmer(dB)","Shimmer:APQ3","Shimmer:APQ5","MDVP:APQ","Shimmer:DDA","NHR","HNR","RPDE","DFA","spread1","spread2","D2","PPE"]
+    inputs = []
+    for i,label in enumerate(labels):
+        col = cols[i%4]
+        inputs.append(col.number_input(label, key=f"p_{i}", value=0.0))
+    if st.button("Parkinsons's Test Result"):
+        try:
+            vals = [float(x) for x in inputs]
+            model_key = None
+            for k in MODELS:
+                if "parkinson" in k.lower(): model_key = k; break
+            if model_key is None:
+                st.error("Parkinsons model not found."); return
+            X = np.array(vals).reshape(1,-1)
+            model_obj = MODELS[model_key]["model"]
+            expected = getattr(model_obj, "n_features_in__", None)
+            if expected is not None and X.shape[1] != expected:
+                st.error(f"Model expects {expected} features but input has {X.shape[1]}."); return
+            pred, conf = model_predict_and_confidence(model_obj, X)
+            if pred == 1:
+                res = "This person has Parkinsons disease"; pos=True
+            else:
+                res = "This person does not have Parkinsons disease"; pos=False
+            result_banner(res, positive=pos)
+            if st.session_state.get("enable_tts", True): speak(res)
+            record = {"id": str(uuid.uuid4()), "model": MODELS[model_key]["filename"], "model_key": model_key, "inputs": dict(zip(labels, vals)), "result": res, "confidence": conf, "timestamp": datetime.now().isoformat()}
+            add_history(st.session_state.user, record)
+            buf = generate_report_bytes(record)
+            fname = f"report_{record['id']}.pdf" if REPORTLAB_AVAILABLE else f"report_{record['id']}.txt"
+            st.download_button(tr("download_report"), data=buf, file_name=fname, mime="application/octet-stream")
+        except Exception as e:
+            st.error(tr("error_fill") + str(e))
+    show_footer()
+
+# -------------------- Page routing --------------------
+selected = show_navbar()
+
+if selected == tr("home"):
+    page_home()
+elif selected == tr("contact"):
+    page_contact()
+elif selected == tr("profile"):
+    page_profile()
+elif selected == tr("prediction_history"):
+    page_prediction_history()
+elif selected == tr("admin_dashboard"):
+    page_admin_dashboard()
+elif selected == tr("diabetes"):
+    page_diabetes()
+elif selected == tr("heart"):
+    page_heart()
+elif selected == tr("parkinsons"):
+    page_parkinsons()
+elif selected == tr("about"):
+    banner_hero()
+    st.header(tr("about"))
+    st.write("This application provides several disease predictions using pre-trained models and includes reporting, history and an admin dashboard.")
+    show_footer()
+else:
+    banner_hero()
+    st.write("Unknown page — choose from the left menu.")
+    show_footer()
+
+
+
+

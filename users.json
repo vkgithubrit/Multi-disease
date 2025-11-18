@@ -5,6 +5,38 @@
     "email": "admin@example.com",
     "history": [
       {
+        "id": "56f118e9-2bdb-4fe0-ac22-65fe3c3da027",
+        "model": "parkinsons_model.pkl",
+        "model_key": "parkinsons_model",
+        "inputs": {
+          "MDVP:Fo(Hz)": 0.05,
+          "MDVP:Fhi(Hz)": 0.04,
+          "MDVP:Flo(Hz)": 0.05,
+          "MDVP:Jitter(%)": 0.04,
+          "MDVP:Jitter(Abs)": 0.04,
+          "MDVP:RAP": 0.08,
+          "MDVP:PPQ": 0.04,
+          "Jitter:DDP": 0.03,
+          "MDVP:Shimmer": 0.05,
+          "MDVP:Shimmer(dB)": 0.03,
+          "Shimmer:APQ3": 0.060000000000000005,
+          "Shimmer:APQ5": 0.04,
+          "MDVP:APQ": 0.04,
+          "Shimmer:DDA": 0.07,
+          "NHR": 0.04,
+          "HNR": 0.04,
+          "RPDE": 0.05,
+          "DFA": 0.04,
+          "spread1": 0.04,
+          "spread2": 0.03,
+          "D2": 0.03,
+          "PPE": 0.05
+        },
+        "result": "This person has Parkinsons disease",
+        "confidence": 0.978324618446879,
+        "timestamp": "2025-11-18T08:43:10.606486"
+      },
+      {
         "id": "0cf65d9c-d2a4-4e44-985d-8db37f684613",
         "model": "diabetes_model.pkl",
         "model_key": "diabetes_model",
@@ -63,5 +95,41 @@
     "password_hash": "27756f050e14a1cb1c1ee867f0eace9ea4d9fcb81b8bee089469f1ebd5fd7b17",
     "name": "sun",
     "email": ""
+  },
+  "siya": {
+    "password_hash": "32a323665a2d5f5cf7c002c3ec6877ca0d149378e9e1da656e3d1dc458641dd0",
+    "name": "",
+    "email": "",
+    "history": [
+      {
+        "id": "f6c3233a-58cf-40d6-9aef-b13e79b6fddc",
+        "model": "heart_model.pkl",
+        "model_key": "heart_model",
+        "inputs": {
+          "age": 54.03999999999999,
+          "sex": 1,
+          "cp": 1.0,
+          "trtbps": 130.0,
+          "chol": 233.0,
+          "fbs": 0,
+          "restecg": 0.0,
+          "thalachh": 150.0,
+          "exng": 0,
+          "oldpeak": 1.2,
+          "slp": 1.0,
+          "caa": 0.0,
+          "thall": 1.0
+        },
+        "result": "This person is having heart disease",
+        "confidence": 0.7761199619031848,
+        "timestamp": "2025-11-18T08:44:30.503594"
+      }
+    ]
+  },
+  "xyz": {
+    "password_hash": "3608bca1e44ea6c4d268eb6db02260269892c0b42b86bbf1e77a6fa16c3c9282",
+    "name": "xyz",
+    "email": "xyz@gmail.com",
+    "history": []
   }
 }
