@@ -135,7 +135,6 @@ joblib
 
 Vivek Kumar
 Machine Learning & Full Stack Developer
-Feel free to connect for contributions or suggestions!
 
 🤝 Contributing
 
